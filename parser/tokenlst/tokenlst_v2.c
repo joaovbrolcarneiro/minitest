@@ -21,21 +21,6 @@ size_t ft_strsetlen(char *s, const char *set);
 size_t ft_strnlen(char *s, char n);
 
 
-
-/*bool is_splited(char *input)
-{
-    int i;
-    bool is_splited_bool;
-
-    i = -1;
-    while (input[++i])
-        if(ischarset("\"'", input[i]))
-            return (true);
-        else
-            is_splited_bool = false;
-    return(is_splited_bool);
-}*/
-
 bool proximity_exception(char *input, int i)/////////split_input
 {
 	if((!ischarset("|<>", input[i]) && input[i] != ' ') && input[i] && !ischarset("|<>", *input ))

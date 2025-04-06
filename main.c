@@ -377,3 +377,4 @@ bool is_valid_exc(const char *path)
 {
 	return (is_regular_file(path) && is_executable(path));
 }
+

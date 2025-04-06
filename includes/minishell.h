@@ -37,7 +37,6 @@
  ** Global variables
  */
  extern int      g_exit_code;
- extern int      g_signal;
 
  /*
  ** Types
@@ -125,6 +124,19 @@
      t_node_tree *ast_root;
  }               t_shell;
 
+  typedef struct s_exp_vars {
+     const char  *input;
+     char        **env;
+     int         last_exit_status;
+     size_t      i;
+     size_t      res_len;
+     size_t      res_cap;
+     char        *result;
+     size_t      var_start;
+     int         pos;
+     char        *var_value;
+ }   t_exp_vars;
+
  /*
  ** Parser functions
  */
@@ -147,7 +159,6 @@
  int         setup_pipes(int pipefd[2]);
  void        save_std_fds(t_shell *shell);
  void        restore_std_fds(t_shell *shell);
- int         setup_heredoc(t_node_tree *node, t_shell *shell);
  void        handle_child_signals(void);
  void        handle_parent_signals(void);
  int         handle_redir_in(t_node_tree *node);
@@ -163,35 +174,16 @@
  int         ft_cd(char **args, char ***env);
  int         ft_pwd(void);
  int         ft_export(char **args, char ***env);
- int         ft_unset(char **args, char ***env);
- int         ft_env(char **env);
  int         ft_exit(char **args, t_shell *shell);
- //int           handle_cd_dash(char **env);
- int         handle_cd_parent(void);
- void        print_export_env(char **env);
- int         export_variable(char *var, char ***env);
 
  /*
  ** Utils functions
  */
  void        init_shell(t_shell *shell, char **env);
- void        handle_signals(void);
  void        cleanup_shell(t_shell *shell);
- t_node_tree *create_ast_node(t_ast_type type);
- void        free_ast(t_node_tree *node);
- int         is_valid_identifier(const char *str);
- char        **find_env_var(char **env, const char *name, size_t name_len);
- char        *extract_var_name(char *env_var);
- void        ft_qsort(void **base, size_t num, size_t size,
-                 int (*compare)(const void *, const void *));
- char        **ft_strdup_array(char **array);
  void        ft_free_strarray(char **array);
- size_t      ft_strarray_len(char **array);
- int         ft_isnum(char *str);
- int         ft_strcmp_wrapper(const void *a, const void *b);
  char        *find_command_path(char *cmd, char **env);
  char        *ft_path_join(char *path, char *file);
- void        sigint_handler(int sig);
  char        *get_env_value(char **env, const char *name);
  char        *get_envar(char **env, char *var);
  size_t      ft_strnlen(char *s, char n);
@@ -200,7 +192,6 @@
  /*
  ** Token manipulation functions
  */
- void        clear_token_lst(t_token *lst);
  void        print_token_lst(t_token *lst);
  t_token     *get_lastone_nodeof_rank(t_token *lst, t_ranking this_ranking);
  t_token     *get_prev_node(t_token *node, t_token *lst);
@@ -210,13 +201,7 @@
  /*
  ** AST / Tree manipulation functions
  */
- void        init_nod(t_node_tree *node_tree, t_token *token,
-                 t_direction_node l_or_r);
- t_node_tree *leaf_tree(t_node_tree *node_tree, t_token *token);
- t_node_tree *populate_tree(t_token *token);
- void        hard_free_tree(t_node_tree *tree);
- t_node_tree *binery_tree(t_token *token_lst);
- void        start(t_token *token_lst);
+ 
  char        *domane_expantion(char **env, char *input);
  void expand_token_list(t_token *token_list, char **env, int last_exit_status);
  int update_env(char ***env, char *var, char *value);
@@ -226,19 +211,6 @@
  void    right_child(t_shell *shell, t_node_tree *right, int pipefd[2]);
  int     fork_left(t_shell *shell, t_node_tree *node, int pipefd[2]);
  int fork_right(t_shell *shell, t_node_tree *node, int pipefd[2]);
-
- typedef struct s_exp_vars {
-     const char  *input;
-     char        **env;
-     int         last_exit_status;
-     size_t      i;
-     size_t      res_len;
-     size_t      res_cap;
-     char        *result;
-     size_t      var_start;
-     int         pos;
-     char        *var_value;
- }   t_exp_vars;
 
  void    exp_var_init(t_exp_vars *v, const char *input,
              char **env, int last_exit_status);
@@ -254,5 +226,7 @@
  void process_variable_assignments(t_shell *shell, t_token *token_list);
  char    *expand_variables(const char *input, char **env, int last_exit_status);
  void expand_token_list_no_assignments(t_token *token_list, char **env, int last_exit_status);
+char **ft_strdup_array(char **array);
+
 
  #endif

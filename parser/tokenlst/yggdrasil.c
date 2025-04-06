@@ -138,14 +138,14 @@ t_node_tree *init_yggdrasil(t_token *token_lst)////////////////init_yggdrasil
 	while (token_lst)
 	{
 		if(root->rank <= token_lst->rank\
-		 /*|| (token_lst->type == TOKEN_REDIR_OUT\
+		 || (token_lst->type == TOKEN_REDIR_OUT\
 		  || token_lst->type == TOKEN_APPEND\
 		   || token_lst->type == TOKEN_HEREDOC\
-		    || token_lst->type == TOKEN_REDIR_IN)*/)
+		    || token_lst->type == TOKEN_REDIR_IN))
 			root = token_lst;
 		token_lst = token_lst->next;
 	}
-	//root->rank = RANK_S;
+	root->rank = RANK_S;
 	return (make_yggdrasil(root, first, NULL, NULL));
 }
 

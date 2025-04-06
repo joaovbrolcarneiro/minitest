@@ -29,21 +29,7 @@ SRCS = \
     $(PARSER_TL)/tokenlst_v2.c \
     $(PARSER_TL)/yggdrasil.c \
     $(PARSER_BT)/binery_tree.c \
-    $(PARSER_TREE)/init_tree.c \
-    $(PARSER_TREE)/tree.c \
-    $(PARSER_QUOTE)/quote_handling.c 
-    #$(EXEC_DIR)/builtins/builtins.c \
-    $(EXEC_DIR)/builtins/builtins_utils.c \
-    $(EXEC_DIR)/executor_heredoc.c \
-    $(EXEC_DIR)/builtins/exit.c \
-    $(EXEC_DIR)/builtins/export.c \
-    $(EXEC_DIR)/builtins/cd.c \
-    $(EXEC_DIR)/env_handler.c \
-    $(EXEC_DIR)/fd_handler.c \
-    $(EXEC_DIR)/utils.c \
-    $(EXEC_DIR)/utils2.c \
-    $(EXEC_DIR)/utils3.c \
-    $(EXEC_DIR)/executor_core.c \              
+    $(PARSER_QUOTE)/quote_handling.c              
 
 OBJS        = $(SRCS:.c=.o)
 LIBFT       = $(LIBFT_DIR)/libft.a
