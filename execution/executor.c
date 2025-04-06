@@ -13,32 +13,82 @@
 int execute_ast(t_shell *shell, t_node_tree *node)
 {
     int status = 0;
+    int original_fds_saved = 0; // Flag
+    int original_fds[2];        // [0]=stdin, [1]=stdout
 
     if (!node)
         return (0);
-    if (node->type == AST_PIPE)
+
+    // NOTE: Conditions now use the NEW enum values after reordering in header
+    if (node->type == AST_PIPE) // Value 0
+    {
         status = execute_pipe_command(shell, node);
-    else if (node->type == AST_REDIR_IN ||
-             node->type == AST_REDIR_OUT ||
-             node->type == AST_APPEND ||
-             node->type == AST_HEREDOC)
-    {
-        status = handle_redirections(node);
-        if (status != 0)
-            return (status);
-        status = execute_simple_command(shell, node);
+        // exit_status updated within execute_pipe_command
     }
-    else if (node->type == AST_COMMAND)
+    // Check for redirection types using their NEW values (1, 2, 3, 4)
+    else if (node->type == AST_REDIR_IN || node->type == AST_REDIR_OUT ||
+             node->type == AST_APPEND || node->type == AST_HEREDOC)
     {
+        // --- Redirection Block ---
+        // 1. Save FDs
+        original_fds[0] = dup(STDIN_FILENO);
+        original_fds[1] = dup(STDOUT_FILENO);
+        if (original_fds[0] == -1 || original_fds[1] == -1) {
+            perror("dup original fds for redirection");
+            if (original_fds[0] != -1) close(original_fds[0]);
+            shell->exit_status = 1; return (1);
+        }
+        original_fds_saved = 1;
+
+        // 2. Apply redirection
+        status = handle_redirections(node); // Calls open/dup2
+        if (status != 0) {
+            if (original_fds_saved) { close(original_fds[0]); close(original_fds[1]); }
+            shell->exit_status = status;
+            return status;
+        }
+
+        // 3. Execute ASSOCIATED COMMAND (left child)
+        if (node->left) {
+            status = execute_ast(shell, node->left); // Recursive call
+        } else {
+            ft_putstr_fd("minishell: syntax error near unexpected token `newline'\n", STDERR_FILENO);
+            status = 2; // Syntax error
+        }
+
+        // 4. Restore FDs
+        if (original_fds_saved) {
+            restore_fds(original_fds);
+            close_fds(original_fds);
+        }
+        shell->exit_status = status;
+    }
+    else if (node->type == AST_COMMAND) // Value 5 (NEW value)
+    {
+        // --- Simple Command Block ---
+        original_fds[0] = dup(STDIN_FILENO);
+        original_fds[1] = dup(STDOUT_FILENO);
+        if (original_fds[0] == -1 || original_fds[1] == -1) {
+            perror("dup original fds for command");
+             if (original_fds[0] != -1) close(original_fds[0]);
+             shell->exit_status = 1; return (1);
+        }
+         original_fds_saved = 1;
+
+        // Call simple_command version WITHOUT internal FD handling
         status = execute_simple_command(shell, node);
+
+        if (original_fds_saved) {
+            restore_fds(original_fds);
+            close_fds(original_fds);
+        }
+        shell->exit_status = status;
     }
     else
     {
-        /* Recursively execute left and right subtrees */
-        if (node->left)
-            status = execute_ast(shell, node->left);
-        if (node->right)
-            status = execute_ast(shell, node->right);
+         ft_printf(stderr, "minishell: execute_ast: Unknown node type %d\n", node->type);
+         status = 1;
+         shell->exit_status = status;
     }
     return (status);
 }
@@ -76,30 +126,46 @@ int execute_command(t_shell *shell, char **args)
 **   - Executes the command.
 **   - Restores the original file descriptors.
 */
+/*
+** execute_simple_command: (MODIFIED - No FD Handling)
+** - Executes a command (builtin or external).
+** - Assumes it's only called for AST_COMMAND nodes (now value 5).
+** - NO LONGER saves/restores STDIN/STDOUT.
+*/
 int execute_simple_command(t_shell *shell, t_node_tree *node)
 {
     int status;
-    char **cmd_args;
+    char **cmd_args = NULL;
 
-    if (!node)
-        return (0);
-    save_std_fds(shell);
-    // status = handle_redirections(node); <--- REMOVE THIS LINE
-    // if (status != 0)
-    //     return (status);
-    /* If the node’s args field is NULL, use the content as the command */
-    if (node->args)
+    if (!node) { /* Error handling */ return (1); }
+    // Check against the NEW value for AST_COMMAND
+    if (node->type != AST_COMMAND) { // AST_COMMAND is now 5
+         ft_printf(stderr, "Error: execute_simple_command called with non-command node type %d\n", node->type);
+         return (1);
+    }
+
+    // Determine arguments (same logic as before)
+    if (node->args && node->args[0]) {
         cmd_args = node->args;
-    else
-    {
+    } else if (node->content) {
         cmd_args = malloc(sizeof(char *) * 2);
+        if (!cmd_args) { perror("malloc"); return (1); }
         cmd_args[0] = node->content;
         cmd_args[1] = NULL;
+    } else {
+         return (0); // Empty command is success
     }
+
+    // Execute
     status = execute_command(shell, cmd_args);
-    restore_std_fds(shell);
-    if (!node->args)
-        free(cmd_args);
+
+    // Cleanup temp args if allocated
+    if (!(node->args && node->args[0]) && node->content) {
+         if (cmd_args) free(cmd_args);
+    }
+
+    // NO save_std_fds / restore_std_fds here
+
     return (status);
 }
 

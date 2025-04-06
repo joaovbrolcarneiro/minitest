@@ -1,0 +1,7 @@
+append.txt
+binery_tree
+multiple_commands.txt
+quote_handling
+test.txt
+tokenlst
+Sun  6 Apr 2025 19:02:37 WEST

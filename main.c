@@ -35,26 +35,38 @@ bool konopwd(bool cmd_exist, const char *input)
 /* Updated parser_cmd_no_found function */
 void parser_cmd_no_found(t_token *token, char **env)
 {
+    t_token_type type; // To check original type easily
+
     while (token)
     {
-        /* Preserve pipe tokens */
-        if (token->type != TOKEN_PIPE && token->type != TOKEN_ASSIGNMENT)
+        type = token->type; // Get current type
+
+        // *** ADD CHECK TO SKIP REDIRECTION TOKENS ***
+        if (type != TOKEN_PIPE && type != TOKEN_ASSIGNMENT &&
+            type != TOKEN_REDIR_IN && type != TOKEN_REDIR_OUT &&
+            type != TOKEN_APPEND && type != TOKEN_HEREDOC)
         {
-            if (token->rank <= RANK_B &&
+            // This block now only processes potential commands/words
+
+            // Check if it looks like a command but isn't found
+            if (token->rank <= RANK_B && // Check if it was initially ranked as potential command
                 !search_list(token->value, env) &&
-                ft_strcmp(token->value, "cd") &&
-                ft_strcmp(token->value, "exit") &&
-                ft_strcmp(token->value, "pwd") &&
-                ft_strcmp(token->value, "export") &&
-                ft_strcmp(token->value, "echo"))
+                // Check against builtins that aren't found via search_list
+                ft_strcmp(token->value, "cd") != 0 &&
+                ft_strcmp(token->value, "exit") != 0 &&
+                ft_strcmp(token->value, "pwd") != 0 &&
+                ft_strcmp(token->value, "export") != 0 &&
+                ft_strcmp(token->value, "echo") != 0)
             {
-                token->type = TOKEN_WORD;
-                ft_printf(RED"konosubash: %s :command not found\n", token->value);
+                // It looked like a command but wasn't found/builtin
+                token->type = TOKEN_WORD; // Downgrade to word
+                // Optional: Keep the printf for user feedback, or remove if noisy
+                ft_printf(RED "konosubash: %s: command not found\n" RESET, token->value);
             }
-            else
-            {
-                token->type = TOKEN_CMD;
-            }
+            // Removed the 'else' block that incorrectly reassigned type to TOKEN_CMD
+            // If it passes the checks above (is found or is a builtin),
+            // its type (presumably TOKEN_CMD already) should remain unchanged.
+            // If it was already TOKEN_WORD, it also remains unchanged.
         }
         token = token->next;
     }

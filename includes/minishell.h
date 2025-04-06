@@ -42,29 +42,29 @@
  ** Types
  */
 
- typedef enum e_token_type
- {
-     TOKEN_PIPE,
-     TOKEN_REDIR_IN,
-     TOKEN_REDIR_OUT,
-     TOKEN_APPEND,
-     TOKEN_HEREDOC,
-     TOKEN_CMD,
-     TOKEN_WORD,
-     TOKEN_EOF,
-     REDIR,
-     TOKEN_ASSIGNMENT // Adicionei para o assignment - joao
- }               t_token_type;
+typedef enum e_token_type {
+    TOKEN_PIPE = 0,       // 0
+    TOKEN_REDIR_IN = 1,   // 1
+    TOKEN_REDIR_OUT = 2,  // 2 -> Deve mapear para AST_REDIR_OUT
+    TOKEN_APPEND = 3,     // 3 -> Deve mapear para AST_APPEND
+    TOKEN_HEREDOC = 4,    // 4 -> Deve mapear para AST_HEREDOC
+    TOKEN_CMD = 5,        // 5 -> Deve mapear para AST_COMMAND
+    TOKEN_WORD,           // 6
+    TOKEN_EOF,            // 7
+    REDIR,                // 8
+    TOKEN_ASSIGNMENT      // 9
+} t_token_type;
 
- typedef enum e_ast_type
- {
-     AST_PIPE = 0,
-     AST_REDIR_IN = 1,
-     AST_COMMAND = 2,
-     AST_REDIR_OUT,
-     AST_APPEND,
-     AST_HEREDOC
- }               t_ast_type;
+ typedef enum e_ast_type {
+    AST_PIPE = 0,         // OK (TOKEN_PIPE = 0)
+    AST_REDIR_IN = 1,     // OK (TOKEN_REDIR_IN = 1)
+    AST_REDIR_OUT = 2,    // ALTERADO! (para corresponder a TOKEN_REDIR_OUT = 2)
+    AST_APPEND = 3,       // ALTERADO! (para corresponder a TOKEN_APPEND = 3)
+    AST_HEREDOC = 4,      // ALTERADO! (para corresponder a TOKEN_HEREDOC = 4)
+    AST_COMMAND = 5,      // ALTERADO! (para corresponder a TOKEN_CMD = 5)
+    // Você pode precisar adicionar outros tipos AST se necessário,
+    // garantindo que os valores não colidam ou definindo-os explicitamente.
+} t_ast_type;
 
  typedef enum e_ranking
  {
