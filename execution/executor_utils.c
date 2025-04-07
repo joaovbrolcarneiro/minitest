@@ -123,17 +123,32 @@ int ft_cd(char **args, char ***env)
 */
 int ft_echo(char **args)
 {
-    int i = 1;
+    int  i = 1;
+    bool print_newline = true; // Flag to track if newline should be printed
+
+    // Check for one or more -n options at the beginning
+    while (args[i] && ft_strcmp(args[i], "-n") == 0)
+    {
+        print_newline = false; // Suppress newline if -n is found
+        i++;                   // Move to the next argument
+    }
+
+    // Print remaining arguments
     while (args[i])
     {
-        ft_printf("%s", args[i]);
-        if (args[i + 1])
-            ft_printf(" ");
+        ft_putstr_fd(args[i], STDOUT_FILENO); // Print argument to stdout
+        if (args[i + 1]) // If there's another argument coming
+            ft_putstr_fd(" ", STDOUT_FILENO); // Print a space
         i++;
     }
-    ft_printf("\n");
-    return (0);
+
+    // Print newline only if the flag is set
+    if (print_newline)
+        ft_putstr_fd("\n", STDOUT_FILENO);
+
+    return (0); // Echo always returns 0 in bash
 }
+
 
 /*
 ** ft_pwd: Builtin to print the working directory.
