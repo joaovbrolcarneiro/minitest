@@ -19,11 +19,12 @@ int execute_ast(t_shell *shell, t_node_tree *node)
     if (!node)
         return (0);
 
-    // NOTE: Conditions now use the NEW enum values after reordering in header
+    // NOTE: Conditions use the NEW enum values after reordering in header
     if (node->type == AST_PIPE) // Value 0
     {
         status = execute_pipe_command(shell, node);
-        // exit_status updated within execute_pipe_command
+        // exit_status should be updated within execute_pipe_command or here based on return
+        shell->exit_status = status; // Assuming execute_pipe_command returns final status
     }
     // Check for redirection types using their NEW values (1, 2, 3, 4)
     else if (node->type == AST_REDIR_IN || node->type == AST_REDIR_OUT ||
@@ -34,26 +35,28 @@ int execute_ast(t_shell *shell, t_node_tree *node)
         original_fds[0] = dup(STDIN_FILENO);
         original_fds[1] = dup(STDOUT_FILENO);
         if (original_fds[0] == -1 || original_fds[1] == -1) {
-            perror("dup original fds for redirection");
+            perror("dup original fds for redirection"); // perror uses stderr correctly
             if (original_fds[0] != -1) close(original_fds[0]);
             shell->exit_status = 1; return (1);
         }
         original_fds_saved = 1;
 
         // 2. Apply redirection
-        status = handle_redirections(node); // Calls open/dup2
-        if (status != 0) {
+        // handle_redirections internally uses perror, which writes to stderr correctly
+        status = handle_redirections(node);
+        if (status != 0) { // Status from handle_redirections is likely -1 on error
             if (original_fds_saved) { close(original_fds[0]); close(original_fds[1]); }
-            shell->exit_status = status;
-            return status;
+            shell->exit_status = 1; // Map internal error (-1) to exit status 1
+            return (1); // Return 1 on redirection error
         }
 
         // 3. Execute ASSOCIATED COMMAND (left child)
         if (node->left) {
-            status = execute_ast(shell, node->left); // Recursive call
+            status = execute_ast(shell, node->left); // Recursive call, status is 0-255
         } else {
-            ft_putstr_fd("minishell: syntax error near unexpected token `newline'\n", STDERR_FILENO);
-            status = 2; // Syntax error
+            // Use ft_putstr_fd for error message to stderr
+            ft_putstr_fd("minishell: syntax error near unexpected token `newline'\n", 2);
+            status = 2; // Syntax error status
         }
 
         // 4. Restore FDs
@@ -61,7 +64,7 @@ int execute_ast(t_shell *shell, t_node_tree *node)
             restore_fds(original_fds);
             close_fds(original_fds);
         }
-        shell->exit_status = status;
+        shell->exit_status = status; // Update status based on command or syntax error
     }
     else if (node->type == AST_COMMAND) // Value 5 (NEW value)
     {
@@ -69,27 +72,34 @@ int execute_ast(t_shell *shell, t_node_tree *node)
         original_fds[0] = dup(STDIN_FILENO);
         original_fds[1] = dup(STDOUT_FILENO);
         if (original_fds[0] == -1 || original_fds[1] == -1) {
-            perror("dup original fds for command");
+            perror("dup original fds for command"); // perror uses stderr
              if (original_fds[0] != -1) close(original_fds[0]);
              shell->exit_status = 1; return (1);
         }
          original_fds_saved = 1;
 
-        // Call simple_command version WITHOUT internal FD handling
+        // Call simple_command (returns 0-255)
         status = execute_simple_command(shell, node);
 
         if (original_fds_saved) {
             restore_fds(original_fds);
             close_fds(original_fds);
         }
+        shell->exit_status = status; // Update status based on command result
+    }
+    else // Handle unknown node types
+    {
+        // Original: printf(stderr, "minishell: execute_ast: Unknown node type %d\n", node->type);
+        // --- CORRECTED using libft ---
+        ft_putstr_fd("minishell: execute_ast: Unknown node type ", 2); // String to stderr (fd 2)
+        ft_putnbr_fd(node->type, 2);                             // Integer to stderr (fd 2)
+        ft_putstr_fd("\n", 2);                                   // Newline to stderr (fd 2)
+        // -----------------------------
+        status = 1; // Assign error status
         shell->exit_status = status;
     }
-    else
-    {
-         ft_printf(stderr, "minishell: execute_ast: Unknown node type %d\n", node->type);
-         status = 1;
-         shell->exit_status = status;
-    }
+    // Make sure status returned is within 0-255 if possible
+    // Though builtins/external command already handle this
     return (status);
 }
 
@@ -137,10 +147,18 @@ int execute_simple_command(t_shell *shell, t_node_tree *node)
     int status;
     char **cmd_args = NULL;
 
-    if (!node) { /* Error handling */ return (1); }
+    if (!node) {
+        ft_putstr_fd("Error: execute_simple_command called with NULL node\n", 2); // Use fd 2
+        return (1);
+        }
     // Check against the NEW value for AST_COMMAND
     if (node->type != AST_COMMAND) { // AST_COMMAND is now 5
-         ft_printf(stderr, "Error: execute_simple_command called with non-command node type %d\n", node->type);
+        // Original: ft_printf(stderr, "Error: ... type %d\n", node->type);
+        // --- CORRECTED using libft ---
+        ft_putstr_fd("Error: execute_simple_command called with non-command node type ", 2);
+        ft_putnbr_fd(node->type, 2);
+        ft_putstr_fd("\n", 2);
+        // -----------------------------
          return (1);
     }
 
@@ -149,7 +167,7 @@ int execute_simple_command(t_shell *shell, t_node_tree *node)
         cmd_args = node->args;
     } else if (node->content) {
         cmd_args = malloc(sizeof(char *) * 2);
-        if (!cmd_args) { perror("malloc"); return (1); }
+        if (!cmd_args) { perror("malloc"); return (1); } // perror is fine (writes to stderr)
         cmd_args[0] = node->content;
         cmd_args[1] = NULL;
     } else {
@@ -157,7 +175,7 @@ int execute_simple_command(t_shell *shell, t_node_tree *node)
     }
 
     // Execute
-    status = execute_command(shell, cmd_args);
+    status = execute_command(shell, cmd_args); // Returns 0-255
 
     // Cleanup temp args if allocated
     if (!(node->args && node->args[0]) && node->content) {
@@ -166,8 +184,9 @@ int execute_simple_command(t_shell *shell, t_node_tree *node)
 
     // NO save_std_fds / restore_std_fds here
 
-    return (status);
+    return (status); // Return 0-255 status
 }
+
 
 /*
 ** execute_external_command:

@@ -74,10 +74,78 @@ int handle_append(t_node_tree *node)
 */
 int handle_heredoc(t_node_tree *node)
 {
-    (void)node;
-    ft_printf("Heredoc is not fully implemented yet.\n");
-    return (0);
+    int     pipefd[2];
+    char    *line;
+    char    *delimiter;
+    size_t  delimiter_len;
+    int     gnl_ret; // To store get_next_line return value if needed
+
+    if (!node || !node->file) {
+        ft_putstr_fd("minishell: Heredoc node missing delimiter\n", STDERR_FILENO);
+        return (-1); // Indicate error
+    }
+    delimiter = node->file;
+    delimiter_len = ft_strlen(delimiter);
+
+    // 1. Create the pipe
+    if (pipe(pipefd) == -1) {
+        perror("minishell: pipe for heredoc");
+        return (-1);
+    }
+
+    // 2. Read input lines until delimiter is matched
+    while (1) {
+        // Use readline for better user experience, or get_next_line for simplicity
+        // Using get_next_line for this example:
+        ft_putstr_fd("> ", STDOUT_FILENO); // Print prompt (optional)
+        line = get_next_line(STDIN_FILENO); // Read from standard input
+
+        // Check for EOF (Ctrl+D)
+        if (line == NULL) {
+            // Bash prints a warning here, you can add it too
+            ft_putstr_fd("minishell: warning: here-document delimited by end-of-file (wanted `", STDERR_FILENO);
+            ft_putstr_fd(delimiter, STDERR_FILENO);
+            ft_putstr_fd("')\n", STDERR_FILENO);
+            break; // End loop on EOF
+        }
+
+        // Check if the line matches the delimiter (excluding potential newline)
+        if (ft_strncmp(line, delimiter, delimiter_len) == 0 &&
+            (line[delimiter_len] == '\n' || line[delimiter_len] == '\0'))
+        {
+            free(line); // Free the delimiter line
+            break; // Delimiter found, end loop
+        }
+
+        // TODO: Add heredoc expansion ($VAR) here if needed (and delimiter wasn't quoted)
+
+        // Write the line (including newline) to the pipe's write end
+        if (write(pipefd[1], line, ft_strlen(line)) == -1) {
+            perror("minishell: write to heredoc pipe");
+            free(line);
+            close(pipefd[0]); // Close pipe ends on error
+            close(pipefd[1]);
+            return (-1);
+        }
+        free(line); // Free the line after writing
+    }
+
+    // 3. Close the write end of the pipe (signals EOF to reader)
+    close(pipefd[1]);
+
+    // 4. Redirect standard input to the read end of the pipe
+    if (dup2(pipefd[0], STDIN_FILENO) == -1) {
+        perror("minishell: dup2 stdin for heredoc");
+        close(pipefd[0]); // Close remaining pipe end on error
+        return (-1);
+    }
+
+    // 5. Close the original read end (no longer needed after dup2)
+    close(pipefd[0]);
+
+    return (0); // Success
 }
+
 
 /*
 ** handle_redirections:

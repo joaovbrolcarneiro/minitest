@@ -6,7 +6,7 @@
 /*   By: jbrol-ca <jbrol-ca@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/31 21:05:42 by hde-barr          #+#    #+#             */
-/*   Updated: 2025/04/05 20:17:38 by jbrol-ca         ###   ########.fr       */
+/*   Updated: 2025/04/07 16:47:49 by jbrol-ca         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -189,9 +189,15 @@ bool is_pipe_super(char *input)//////////who_is_node
 	return(false);
 }
 
-bool is_cmd_super(char *input, char **env)//////////who_is_node
+bool is_cmd_super(char *input, char **env) // MODIFIED
 {
-	return (search_list(input, env));
+    // 1. Check if it's a builtin command FIRST
+    if (is_builtin(input))
+    {
+        return (true);
+    }
+    // 2. If not a builtin, check PATH or if it's an executable path
+    return (search_list(input, env));
 }
 
 bool is_eof(char *input)//////////who_is_node

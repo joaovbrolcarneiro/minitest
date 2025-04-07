@@ -390,3 +390,20 @@ bool is_valid_exc(const char *path)
 	return (is_regular_file(path) && is_executable(path));
 }
 
+bool is_builtin(const char *cmd)
+{
+    if (!cmd)
+        return (false);
+    // Add all your builtin commands here
+    if (ft_strcmp(cmd, "echo") == 0 ||
+        ft_strcmp(cmd, "cd") == 0 ||
+        ft_strcmp(cmd, "pwd") == 0 ||
+        ft_strcmp(cmd, "export") == 0 ||
+       //ft_strcmp(cmd, "unset") == 0 || // Uncomment if you implement unset
+       //ft_strcmp(cmd, "env") == 0 ||   // Uncomment if you implement env
+        ft_strcmp(cmd, "exit") == 0)
+    {
+        return (true);
+    }
+    return (false);
+}

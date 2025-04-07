@@ -227,6 +227,7 @@ typedef enum e_token_type {
  char    *expand_variables(const char *input, char **env, int last_exit_status);
  void expand_token_list_no_assignments(t_token *token_list, char **env, int last_exit_status);
 char **ft_strdup_array(char **array);
+bool is_builtin(const char *cmd);
 
 
  #endif
