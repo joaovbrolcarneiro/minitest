@@ -147,18 +147,10 @@ int execute_simple_command(t_shell *shell, t_node_tree *node)
     int status;
     char **cmd_args = NULL;
 
-    if (!node) {
-        ft_putstr_fd("Error: execute_simple_command called with NULL node\n", 2); // Use fd 2
-        return (1);
-        }
+    if (!node) { /* Error handling */ return (1); }
     // Check against the NEW value for AST_COMMAND
     if (node->type != AST_COMMAND) { // AST_COMMAND is now 5
-        // Original: ft_printf(stderr, "Error: ... type %d\n", node->type);
-        // --- CORRECTED using libft ---
-        ft_putstr_fd("Error: execute_simple_command called with non-command node type ", 2);
-        ft_putnbr_fd(node->type, 2);
-        ft_putstr_fd("\n", 2);
-        // -----------------------------
+         ft_printf(stderr, "Error: execute_simple_command called with non-command node type %d\n", node->type);
          return (1);
     }
 
@@ -167,7 +159,7 @@ int execute_simple_command(t_shell *shell, t_node_tree *node)
         cmd_args = node->args;
     } else if (node->content) {
         cmd_args = malloc(sizeof(char *) * 2);
-        if (!cmd_args) { perror("malloc"); return (1); } // perror is fine (writes to stderr)
+        if (!cmd_args) { perror("malloc"); return (1); }
         cmd_args[0] = node->content;
         cmd_args[1] = NULL;
     } else {
@@ -175,7 +167,7 @@ int execute_simple_command(t_shell *shell, t_node_tree *node)
     }
 
     // Execute
-    status = execute_command(shell, cmd_args); // Returns 0-255
+    status = execute_command(shell, cmd_args);
 
     // Cleanup temp args if allocated
     if (!(node->args && node->args[0]) && node->content) {
@@ -184,9 +176,8 @@ int execute_simple_command(t_shell *shell, t_node_tree *node)
 
     // NO save_std_fds / restore_std_fds here
 
-    return (status); // Return 0-255 status
+    return (status);
 }
-
 
 /*
 ** execute_external_command:

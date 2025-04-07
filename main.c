@@ -407,3 +407,79 @@ bool is_builtin(const char *cmd)
     }
     return (false);
 }
+
+int ft_unset(char **args, t_shell *shell)
+{
+    int i = 1;
+    int j, k;
+    int exit_code = 0; // Assume success
+    size_t name_len;
+    bool found_and_removed;
+
+    if (!args[1]) // No arguments given is success
+        return (0);
+
+    while (args[i])
+    {
+        // Validate the identifier using the new helper function
+        if (!is_valid_identifier(args[i]))
+        {
+            ft_putstr_fd("minishell: unset: `", 2);
+            ft_putstr_fd(args[i], 2);
+            ft_putstr_fd("': not a valid identifier\n", 2);
+            exit_code = 1; // Mark failure
+            i++;
+            continue; // Process next argument
+        }
+
+        // Search and remove from environment
+        j = 0;
+        found_and_removed = false;
+        name_len = ft_strlen(args[i]);
+        while (shell->env[j])
+        {
+            // Check if the current env entry matches the variable name to unset
+            if (ft_strncmp(shell->env[j], args[i], name_len) == 0 &&
+                shell->env[j][name_len] == '=')
+            {
+                // Found: free the string and shift the rest of the array down
+                free(shell->env[j]);
+                k = j;
+                // Shift pointers down
+                while (shell->env[k + 1]) {
+                    shell->env[k] = shell->env[k + 1];
+                    k++;
+                }
+                shell->env[k] = NULL; // Null-terminate the shifted array
+                found_and_removed = true;
+                // Stay at index j, the next element is now here. Or break if only removing first match. Let's break.
+                break;
+            }
+            j++; // Only increment j if no removal happened at this index
+        }
+        // If not found, we just continue to the next argument silently
+        i++; // Move to next argument in args[]
+    }
+    return (exit_code);
+}
+
+bool is_valid_identifier(const char *identifier)
+{
+    int i = 0;
+
+    // Check if NULL or empty, or if first character is invalid
+    if (!identifier || !is_valid_var_char(identifier[i], i))
+        return (false);
+
+    // Check remaining characters
+    i++;
+    while (identifier[i])
+    {
+        if (!is_valid_var_char(identifier[i], i)) // Use i > 0 implicitly
+            return (false);
+        i++;
+    }
+
+    // If we passed all checks and the string wasn't just empty initially
+    return (true);
+}

@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   quote_handling.c                                   :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: hde-barr <hde-barr@student.42.fr>          +#+  +:+       +#+        */
+/*   By: jbrol-ca <jbrol-ca@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/02/27 17:59:46 by hde-barr          #+#    #+#             */
-/*   Updated: 2025/04/02 19:45:42 by hde-barr         ###   ########.fr       */
+/*   Updated: 2025/04/07 19:09:58 by jbrol-ca         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -120,21 +120,59 @@ bool handler_quote_operator(char *input)///////it is here
 	return (false);
 }
 
-char  *quote_handler(t_token *token, char **env, int *is_unclosed)///////it is here
+char  *quote_handler(t_token *token, char **env, int *is_unclosed)
 {
-	int cmd_len;
+    int cmd_len;
+    char quote_char = 0;
+    char *trimmed_value = NULL;
+    bool is_operator_literal;
 
-	*is_unclosed = 0;
-	token->value = is_quote_opened(token->value, is_unclosed);
-	if(handler_quote_operator(token->value))
-		token->literal = true;
-	else
-		token->literal = false;
-	if(*token->value == '\'')
-		return (ft_strtrim(token->value, "'"));
-	token->value = ft_strtrim(token->value, "\"");
-	cmd_len = quote_handler_counter(token->value, env);
-	token->value = quote_handler_cpy( cmd_len, token->value, env);
-	return (token->value);
+    *is_unclosed = 0;
+    if (!token || !token->value)
+        return (NULL);
+
+    if (token->value[0] == '\'' || token->value[0] == '"')
+        quote_char = token->value[0];
+
+    token->value = is_quote_opened(token->value, is_unclosed);
+    if (*is_unclosed)
+        return (token->value);
+
+    is_operator_literal = handler_quote_operator(token->value);
+
+    if (quote_char == '\'')
+    {
+        token->literal = true; // Change was adding this line
+        trimmed_value = ft_strtrim(token->value, "'");
+         if (!trimmed_value) {
+            perror("ft_strtrim in quote_handler");
+            return (token->value);
+        }
+        // free(token->value); // Consider memory management if value was allocated
+        token->value = trimmed_value;
+        return (token->value);
+    }
+
+    token->literal = is_operator_literal;
+
+    if (quote_char == '"')
+    {
+        trimmed_value = ft_strtrim(token->value, "\"");
+         if (!trimmed_value) {
+            perror("ft_strtrim in quote_handler");
+            return (token->value);
+        }
+        // free(token->value); // Consider memory management if value was allocated
+        token->value = trimmed_value;
+        if (!token->literal) {
+             cmd_len = quote_handler_counter(token->value, env);
+             // Potential free needed for token->value before reassigning?
+             token->value = quote_handler_cpy(cmd_len, token->value, env);
+        }
+        return (token->value);
+    }
+
+    return (token->value);
 }
+
 
