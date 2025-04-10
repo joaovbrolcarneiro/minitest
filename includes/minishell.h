@@ -203,8 +203,7 @@ typedef enum e_token_type {
  */
  
  char        *domane_expantion(char **env, char *input);
- void expand_token_list(t_token *token_list, char **env, int last_exit_status);
- int update_env(char ***env, char *var, char *value);
+ void    expand_token_list(t_token *token_list, char **env /* REMOVED int last_exit_status */); // If you use this one int update_env(char ***env, char *var, char *value);
  char **sort_env(char **env);
 
  void    left_child(t_shell *shell, t_node_tree *left, int pipefd[2]);
@@ -212,8 +211,7 @@ typedef enum e_token_type {
  int     fork_left(t_shell *shell, t_node_tree *node, int pipefd[2]);
  int fork_right(t_shell *shell, t_node_tree *node, int pipefd[2]);
 
- void    exp_var_init(t_exp_vars *v, const char *input,
-             char **env, int last_exit_status);
+void    exp_var_init(t_exp_vars *v, const char *input, char **env /* REMOVED , int last_exit_status */);
  int     append_char(char **buf, size_t *len, size_t *cap, char c);
  void    handle_exit_status(t_exp_vars *v);
  void    handle_variable(t_exp_vars *v);
@@ -224,11 +222,11 @@ typedef enum e_token_type {
  int is_valid_assignment(const char *token);
  void apply_variable_assignment(t_shell *shell, t_token *token_list);
  void process_variable_assignments(t_shell *shell, t_token *token_list);
- char    *expand_variables(const char *input, char **env, int last_exit_status);
- void expand_token_list_no_assignments(t_token *token_list, char **env, int last_exit_status);
-char **ft_strdup_array(char **array);
+ char    *expand_variables(const char *input, char **env /* REMOVED int last_exit_status */); 
+ void    expand_token_list_no_assignments(t_token *token_list, char **env /* REMOVED int last_exit_status */); // If you use this onechar **ft_strdup_array(char **array);
 bool is_builtin(const char *cmd);
 int ft_unset(char **args, t_shell *shell);
 bool is_valid_identifier(const char *identifier);
+int update_env(char ***env, char *var, char *value);
 
  #endif

@@ -49,23 +49,34 @@
      }
  }
 
- void expand_token_list_no_assignments(t_token *token_list, char **env, int last_exit_status)
- {
-     t_token *cur;
-     char *expanded;
+void expand_token_list_no_assignments(t_token *token_list, char **env /* REMOVED , int last_exit_status */)
+{
+    t_token *cur;
+    char *expanded;
+    char *original_value; // Temp storage for original pointer
 
-     cur = token_list;
-     while (cur)
-     {
-         if (cur->value && !cur->literal && cur->type != TOKEN_ASSIGNMENT)
-         {
-             expanded = expand_variables(cur->value, env, last_exit_status);
-             free(cur->value); // Free the original value
-             cur->value = expanded;
-         }
-         cur = cur->next;
-     }
- }
+    cur = token_list;
+    while (cur)
+    {
+        if (cur->value && !cur->literal && cur->type != TOKEN_ASSIGNMENT)
+        {
+            original_value = cur->value;
+
+            // Call expand_variables WITHOUT passing status parameter
+            expanded = expand_variables(original_value, env /* REMOVED , last_exit_status */);
+
+            // Memory handling
+            if (expanded == NULL && original_value != NULL) {
+                ft_putstr_fd("minishell: warning: expansion failed\n", 2);
+            } else if (expanded != original_value) {
+                free(original_value);
+                cur->value = expanded;
+            }
+            // else: no change or expansion failed but original was NULL
+        }
+        cur = cur->next;
+    }
+}
 
  void process_variable_assignments(t_shell *shell, t_token *token_list)
  {

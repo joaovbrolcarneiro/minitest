@@ -5,6 +5,8 @@
 #include "minishell.h"
 #include "minishell_part2.h"
 
+int g_exit_code = 0;
+
 /*
 ** konopwd:
 **  - If the trimmed input equals "pwd", prints the current directory.
@@ -241,26 +243,21 @@ void input_handler(t_shell *shell, char *input)
     t_token *token;
     t_node_tree *tree;
 
-    /* Do NOT reinitialize shell.env here!
-       Use the persistent shell->env set in main(). */
     token = delegated_by_input_handler(input, shell->env);
-
-    // Apply variable assignments - MUST be done BEFORE typealize
     process_variable_assignments(shell, token);
 
-    // Expand variables in the remaining tokens (excluding assignments)
-    expand_token_list_no_assignments(token, shell->env, shell->exit_status);
+    // --- MODIFIED Expander Call ---
+    // Pass only needed args, expander reads g_exit_code for $?
+    expand_token_list_no_assignments(token, shell->env);
+    // ----------------------------
 
-    // Now proceed with the rest of your token processing
-    token = handler_args_file(token, token); // Use original function
-    parser_cmd_no_found(token, shell->env); // Modify this to ignore assignments
-    print_token_lst(token); // Modify this to handle assignment tokens
-    tree = init_yggdrasil(token); // Use original function
+    token = handler_args_file(token, token);
+    parser_cmd_no_found(token, shell->env); // Needs is_builtin check inside
+    print_token_lst(token);
+    tree = init_yggdrasil(token);
     if (tree)
-        shell->exit_status = execute_ast(shell, tree);
-    //free(input); //tinha colocado mas tava dando double-free
+        execute_ast(shell, tree); // execute_ast now updates g_exit_code
 }
-
 
 
 t_token *delegated_by_input_handler(char *input, char **env)
@@ -353,18 +350,16 @@ int main(int argc, char **argv, char **envp)
 
     (void)argc;
     (void)argv;
-    /* Create one modifiable copy of the initial environment */
-    shell.env = ft_strdup_array(envp);
-    shell.exit_status = 0;
-    shell.saved_stdin = dup(STDIN_FILENO);
-    shell.saved_stdout = dup(STDOUT_FILENO);
-    shell.heredoc_fd = -1;
-    shell.in_heredoc = 0;
-    shell.ast_root = NULL;
-    signal(SIGQUIT, SIG_IGN); // Ignore SIGQUIT (Ctrl+/)
+
+    g_exit_code = 0; // Initialize global status
+
+    // Init shell struct (init_shell modified to remove exit_status)
+    init_shell(&shell, envp);
+
+    signal(SIGQUIT, SIG_IGN);
     readline_loop(&shell);
     cleanup_shell(&shell);
-    return (0);
+    return (g_exit_code); // Return last status
 }
 
 bool is_executable(const char *path)

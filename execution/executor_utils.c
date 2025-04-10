@@ -52,13 +52,20 @@ void ft_free_strarray(char **array)
 void init_shell(t_shell *shell, char **env)
 {
     shell->env = ft_strdup_array(env);
-    shell->exit_status = 0;
+    // shell->exit_status = 0; // <<< REMOVED
     shell->saved_stdin = dup(STDIN_FILENO);
     shell->saved_stdout = dup(STDOUT_FILENO);
+    if (shell->saved_stdin == -1 || shell->saved_stdout == -1) {
+        perror("minishell: init_shell: dup failed");
+        if (shell->saved_stdin != -1) close(shell->saved_stdin);
+        if (shell->env) ft_free_strarray(shell->env);
+        exit(EXIT_FAILURE);
+    }
     shell->heredoc_fd = -1;
     shell->in_heredoc = 0;
     shell->ast_root = NULL;
 }
+
 
 /*
 ** cleanup_shell: Free allocated resources in shell.
@@ -174,11 +181,57 @@ int ft_pwd(void)
 */
 int ft_exit(char **args, t_shell *shell)
 {
-    (void)args;
+    int  exit_val;
+    bool is_numeric = true;
+    int  i = 0;
+
+    ft_putstr_fd("exit\n", STDERR_FILENO); // Mimic bash printing "exit"
+
+    if (!args[1]) {
+        // No argument: exit with the last command's status
+        exit_val = g_exit_code;
+    } else {
+        // Check if argument is numeric
+        if (args[1][i] == '+' || args[1][i] == '-') // Skip leading sign
+            i++;
+        if (args[1][i] == '\0') // Sign only is not numeric
+            is_numeric = false;
+        while (args[1][i]) {
+            if (!ft_isdigit(args[1][i])) {
+                is_numeric = false;
+                break;
+            }
+            i++;
+        }
+        // TODO: Add check for overflow (long long then check range?)
+
+        if (!is_numeric) {
+             ft_putstr_fd("minishell: exit: ", 2);
+             ft_putstr_fd(args[1], 2);
+             ft_putstr_fd(": numeric argument required\n", 2);
+             exit_val = 2; // Bash uses 255 here, 2 is also common for misuse
+             // We *must* exit here according to subject/bash
+             cleanup_shell(shell);
+             exit(exit_val);
+        } else {
+             // Check for too many arguments ONLY if the first one was numeric
+             if (args[2]) {
+                 ft_putstr_fd("minishell: exit: too many arguments\n", 2);
+                 // Don't exit, return error status 1 (bash behavior)
+                 return (1);
+             }
+             // Convert valid numeric argument
+             // Use proper long long parsing later if needed for overflow check
+             exit_val = ft_atoi(args[1]) % 256; // Use modulo 256 for 0-255 range
+             if (exit_val < 0) exit_val += 256; // Handle negative modulo result
+        }
+    }
+    // If we reach here, we need to exit
     cleanup_shell(shell);
-    exit(shell->exit_status);
-    return (0);
+    exit(exit_val);
+    // return (0); // Unreachable
 }
+
 
 /*
 ** get_env_value: Get the value of an environment variable.

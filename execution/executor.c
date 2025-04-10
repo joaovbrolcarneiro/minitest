@@ -12,97 +12,72 @@
 */
 int execute_ast(t_shell *shell, t_node_tree *node)
 {
-    int status = 0;
-    int original_fds_saved = 0; // Flag
-    int original_fds[2];        // [0]=stdin, [1]=stdout
+    int status = 0; // Local variable for 0-255 exit code
+    int internal_status = 0; // For return values like -1 from helpers
+    int original_fds_saved = 0;
+    int original_fds[2];
 
-    if (!node)
-        return (0);
-
-    // NOTE: Conditions use the NEW enum values after reordering in header
-    if (node->type == AST_PIPE) // Value 0
-    {
-        status = execute_pipe_command(shell, node);
-        // exit_status should be updated within execute_pipe_command or here based on return
-        shell->exit_status = status; // Assuming execute_pipe_command returns final status
+    if (!node) {
+        g_exit_code = 0; // No node, success
+        return 0;
     }
-    // Check for redirection types using their NEW values (1, 2, 3, 4)
-    else if (node->type == AST_REDIR_IN || node->type == AST_REDIR_OUT ||
-             node->type == AST_APPEND || node->type == AST_HEREDOC)
-    {
-        // --- Redirection Block ---
-        // 1. Save FDs
+
+    // Use reordered enum values for types
+    if (node->type == AST_PIPE) { // 0
+        status = execute_pipe_command(shell, node); // Returns 0-255
+    }
+    else if (node->type >= AST_REDIR_IN && node->type <= AST_HEREDOC) { // 1, 2, 3, 4
+        // --- Redirection ---
         original_fds[0] = dup(STDIN_FILENO);
         original_fds[1] = dup(STDOUT_FILENO);
-        if (original_fds[0] == -1 || original_fds[1] == -1) {
-            perror("dup original fds for redirection"); // perror uses stderr correctly
-            if (original_fds[0] != -1) close(original_fds[0]);
-            shell->exit_status = 1; return (1);
-        }
+        if (original_fds[0] == -1 || original_fds[1] == -1) { /* perror, etc */ status = 1; goto end_ast; }
         original_fds_saved = 1;
 
-        // 2. Apply redirection
-        // handle_redirections internally uses perror, which writes to stderr correctly
-        status = handle_redirections(node);
-        if (status != 0) { // Status from handle_redirections is likely -1 on error
-            if (original_fds_saved) { close(original_fds[0]); close(original_fds[1]); }
-            shell->exit_status = 1; // Map internal error (-1) to exit status 1
-            return (1); // Return 1 on redirection error
+        internal_status = handle_redirections(node); // 0 or -1
+        if (internal_status != 0) {
+            status = 1; // Map redir error to exit code 1
+            goto end_ast; // Go to cleanup/end
         }
-
-        // 3. Execute ASSOCIATED COMMAND (left child)
         if (node->left) {
-            status = execute_ast(shell, node->left); // Recursive call, status is 0-255
+            status = execute_ast(shell, node->left); // Execute command, get 0-255
         } else {
-            // Use ft_putstr_fd for error message to stderr
             ft_putstr_fd("minishell: syntax error near unexpected token `newline'\n", 2);
-            status = 2; // Syntax error status
+            status = 2;
         }
-
-        // 4. Restore FDs
-        if (original_fds_saved) {
-            restore_fds(original_fds);
-            close_fds(original_fds);
-        }
-        shell->exit_status = status; // Update status based on command or syntax error
     }
-    else if (node->type == AST_COMMAND) // Value 5 (NEW value)
-    {
-        // --- Simple Command Block ---
+    else if (node->type == AST_COMMAND) { // 5
+        // --- Command ---
         original_fds[0] = dup(STDIN_FILENO);
         original_fds[1] = dup(STDOUT_FILENO);
-        if (original_fds[0] == -1 || original_fds[1] == -1) {
-            perror("dup original fds for command"); // perror uses stderr
-             if (original_fds[0] != -1) close(original_fds[0]);
-             shell->exit_status = 1; return (1);
-        }
-         original_fds_saved = 1;
+        if (original_fds[0] == -1 || original_fds[1] == -1) { /* perror, etc */ status = 1; goto end_ast; }
+        original_fds_saved = 1;
 
-        // Call simple_command (returns 0-255)
-        status = execute_simple_command(shell, node);
+        status = execute_simple_command(shell, node); // Returns 0-255
+    }
+    // Handle case where a non-command word becomes the root (Type 6)
+    else if (node->type == TOKEN_WORD) { // Check against actual TOKEN_WORD value (6)
+         ft_putstr_fd("minishell: command not found: ", 2);
+         ft_putstr_fd(node->content ? node->content : "unknown", 2);
+         ft_putstr_fd("\n", 2);
+         status = 127;
+    }
+    else { // Truly unknown type
+        ft_putstr_fd("minishell: execute_ast: Unknown node type ", 2);
+        ft_putnbr_fd(node->type, 2);
+        ft_putstr_fd("\n", 2);
+        status = 1;
+    }
 
-        if (original_fds_saved) {
-            restore_fds(original_fds);
-            close_fds(original_fds);
-        }
-        shell->exit_status = status; // Update status based on command result
+end_ast: // Cleanup label
+    if (original_fds_saved) {
+        // Add error checking for restore_fds? dup2 can fail.
+        restore_fds(original_fds);
+        close_fds(original_fds);
     }
-    else // Handle unknown node types
-    {
-        // Original: printf(stderr, "minishell: execute_ast: Unknown node type %d\n", node->type);
-        // --- CORRECTED using libft ---
-        ft_putstr_fd("minishell: execute_ast: Unknown node type ", 2); // String to stderr (fd 2)
-        ft_putnbr_fd(node->type, 2);                             // Integer to stderr (fd 2)
-        ft_putstr_fd("\n", 2);                                   // Newline to stderr (fd 2)
-        // -----------------------------
-        status = 1; // Assign error status
-        shell->exit_status = status;
-    }
-    // Make sure status returned is within 0-255 if possible
-    // Though builtins/external command already handle this
+    // *** Update global status at the end ***
+    g_exit_code = status;
     return (status);
 }
-
 /*
 ** execute_command:
 **   - Checks if the command is a builtin (you can add more builtins here).
@@ -147,34 +122,40 @@ int execute_simple_command(t_shell *shell, t_node_tree *node)
     int status;
     char **cmd_args = NULL;
 
-    if (!node) { /* Error handling */ return (1); }
-    // Check against the NEW value for AST_COMMAND
-    if (node->type != AST_COMMAND) { // AST_COMMAND is now 5
-         ft_printf(stderr, "Error: execute_simple_command called with non-command node type %d\n", node->type);
-         return (1);
+    if (!node) {
+        ft_putstr_fd("minishell: Error: execute_simple_command called with NULL node\n", 2);
+        return (1);
     }
 
-    // Determine arguments (same logic as before)
+    // Check node type (assuming AST_COMMAND is 5 based on previous context)
+    if (node->type != AST_COMMAND) {
+        // --- CORRECTED Print using libft ---
+        ft_putstr_fd("minishell: Error: execute_simple_command called with non-command node type ", 2);
+        ft_putnbr_fd(node->type, 2);
+        ft_putstr_fd("\n", 2);
+        // -----------------------------------
+        return (1);
+    }
+
+    // Determine arguments
     if (node->args && node->args[0]) {
         cmd_args = node->args;
     } else if (node->content) {
         cmd_args = malloc(sizeof(char *) * 2);
-        if (!cmd_args) { perror("malloc"); return (1); }
+        if (!cmd_args) { perror("minishell: malloc"); return (1); }
         cmd_args[0] = node->content;
         cmd_args[1] = NULL;
     } else {
-         return (0); // Empty command is success
+         return (0); // Empty command
     }
 
     // Execute
-    status = execute_command(shell, cmd_args);
+    status = execute_command(shell, cmd_args); // Returns 0-255
 
     // Cleanup temp args if allocated
     if (!(node->args && node->args[0]) && node->content) {
          if (cmd_args) free(cmd_args);
     }
-
-    // NO save_std_fds / restore_std_fds here
 
     return (status);
 }
@@ -185,40 +166,53 @@ int execute_simple_command(t_shell *shell, t_node_tree *node)
 */
 int execute_external_command(t_shell *shell, char **args)
 {
-    pid_t pid;
-    int status;
-    char *cmd_path;
+    pid_t   pid;
+    int     wait_status; // Raw status from waitpid
+    int     exit_code;   // Final 0-255 exit code
+    char    *cmd_path = NULL; // Initialize to NULL
 
     pid = fork();
-    if (pid == 0)
+    if (pid == 0) // Child
     {
         handle_child_signals();
-        /* If args[0] contains a '/', assume it's a path; otherwise, search in PATH */
-        if (ft_strchr(args[0], '/') != NULL)
+        if (args[0] && ft_strchr(args[0], '/')) // Check args[0] exists
             cmd_path = ft_strdup(args[0]);
-        else
+        else if (args[0]) // Check args[0] exists
             cmd_path = find_command_path(args[0], shell->env);
 
-        if (!cmd_path)
-        {
-            ft_printf(RED"Command not found: %s\n"RESET, args[0]);
+        if (!cmd_path) {
+            ft_putstr_fd("minishell: command not found: ", 2);
+            ft_putstr_fd(args[0] ? args[0] : "", 2); // Handle NULL args[0]?
+            ft_putstr_fd("\n", 2);
             exit(127);
         }
         execve(cmd_path, args, shell->env);
-        perror("execve");
-        exit(errno);
+        perror("minishell: execve");
+        free(cmd_path);
+        if (errno == EACCES) exit(126);
+        if (errno == ENOENT) exit(127); // Should be caught by find_command_path
+        exit(EXIT_FAILURE);
     }
-    else if (pid < 0)
+    else if (pid < 0) // Fork Error
     {
-        perror("fork");
-        return (-1);
+        perror("minishell: fork");
+        return (1); // Error exit code
     }
-    else
+    else // Parent
     {
         handle_parent_signals();
-        waitpid(pid, &status, 0);
-    }
-    return (status);
-}
+        waitpid(pid, &wait_status, 0);
 
+        if (WIFEXITED(wait_status)) {
+            exit_code = WEXITSTATUS(wait_status);
+        } else if (WIFSIGNALED(wait_status)) {
+            exit_code = 128 + WTERMSIG(wait_status);
+            if (WTERMSIG(wait_status) == SIGQUIT) ft_putstr_fd("Quit (core dumped)\n", 2);
+            else if (WTERMSIG(wait_status) == SIGINT) ft_putstr_fd("\n", 2);
+        } else {
+            exit_code = EXIT_FAILURE;
+        }
+        return (exit_code); // Return interpreted code
+    }
+}
 

@@ -29,24 +29,28 @@ int	append_char(char **buf, size_t *len, size_t *cap, char c)
 	return (1);
 }
 
-void	handle_exit_status(t_exp_vars *v)
+void    handle_exit_status(t_exp_vars *v)
 {
-	char	*exit_str;
-	size_t	k;
+    char    *exit_str = NULL;
+    size_t  k = 0;
 
-	exit_str = ft_itoa(v->last_exit_status);
-	k = 0;
-	while (exit_str[k])
-	{
-		if (!append_char(&v->result, &v->res_len, &v->res_cap, exit_str[k]))
-		{
-			free(exit_str);
-			return ;
-		}
-		k++;
-	}
-	free(exit_str);
-	v->i++;
+    // *** Read from global variable ***
+    exit_str = ft_itoa(g_exit_code);
+    // *********************************
+
+    if (!exit_str) { /* handle malloc error in ft_itoa */ return; }
+
+    while (exit_str[k])
+    {
+        if (!append_char(&v->result, &v->res_len, &v->res_cap, exit_str[k]))
+        {
+            free(exit_str);
+            return ;
+        }
+        k++;
+    }
+    free(exit_str);
+    v->i++; // Move past '?'
 }
 
 void	handle_variable(t_exp_vars *v)
