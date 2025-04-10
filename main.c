@@ -43,32 +43,34 @@ void parser_cmd_no_found(t_token *token, char **env)
     {
         type = token->type; // Get current type
 
-        // *** ADD CHECK TO SKIP REDIRECTION TOKENS ***
+        // Only process tokens that are potential commands initially
         if (type != TOKEN_PIPE && type != TOKEN_ASSIGNMENT &&
             type != TOKEN_REDIR_IN && type != TOKEN_REDIR_OUT &&
             type != TOKEN_APPEND && type != TOKEN_HEREDOC)
         {
-            // This block now only processes potential commands/words
-
-            // Check if it looks like a command but isn't found
-            if (token->rank <= RANK_B && // Check if it was initially ranked as potential command
+            // Check if it was ranked like a command (B or lower) AND
+            // it's not found in PATH AND
+            // it's NOT one of the known builtins.
+            if (token->rank <= RANK_B &&
                 !search_list(token->value, env) &&
-                // Check against builtins that aren't found via search_list
+                // *** Add ft_strcmp(token->value, "unset") != 0 here ***
                 ft_strcmp(token->value, "cd") != 0 &&
                 ft_strcmp(token->value, "exit") != 0 &&
                 ft_strcmp(token->value, "pwd") != 0 &&
                 ft_strcmp(token->value, "export") != 0 &&
+                ft_strcmp(token->value, "unset") != 0 && // <<< ADDED THIS CHECK
                 ft_strcmp(token->value, "echo") != 0)
+                // Add other builtins like "env" here if implemented
             {
-                // It looked like a command but wasn't found/builtin
+                // If all conditions above are true, it's likely an error.
                 token->type = TOKEN_WORD; // Downgrade to word
-                // Optional: Keep the printf for user feedback, or remove if noisy
-                ft_printf(RED "konosubash: %s: command not found\n" RESET, token->value);
+                // Print error message (using ft_putstr_fd to stderr is better)
+                ft_putstr_fd(RED "minishell: command not found: ", 2);
+                ft_putstr_fd(token->value, 2);
+                ft_putstr_fd("\n" RESET, 2);
             }
-            // Removed the 'else' block that incorrectly reassigned type to TOKEN_CMD
-            // If it passes the checks above (is found or is a builtin),
-            // its type (presumably TOKEN_CMD already) should remain unchanged.
-            // If it was already TOKEN_WORD, it also remains unchanged.
+            // If it IS a known builtin OR found in PATH, its type (TOKEN_CMD) remains.
+            // If it was already TOKEN_WORD, it also remains TOKEN_WORD.
         }
         token = token->next;
     }
@@ -394,8 +396,8 @@ bool is_builtin(const char *cmd)
         ft_strcmp(cmd, "cd") == 0 ||
         ft_strcmp(cmd, "pwd") == 0 ||
         ft_strcmp(cmd, "export") == 0 ||
-       //ft_strcmp(cmd, "unset") == 0 || // Uncomment if you implement unset
-       //ft_strcmp(cmd, "env") == 0 ||   // Uncomment if you implement env
+        ft_strcmp(cmd, "unset") == 0 || // <<< MAKE SURE THIS IS PRESENT AND UNCOMMENTED
+        // ft_strcmp(cmd, "env") == 0 ||   // Add if implemented
         ft_strcmp(cmd, "exit") == 0)
     {
         return (true);

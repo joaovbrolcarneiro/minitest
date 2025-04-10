@@ -402,41 +402,72 @@ char **sort_env(char **env)
 int ft_export(char **args, char ***env)
 {
     int i;
-    int ret = 0;
+    int exit_code = 0; // Overall exit code for the command batch
     char *equal;
+    char *var_name;
 
-    if (!args[1])
+    if (!args[1]) // No arguments: print sorted env
     {
-        /* Sem argumentos: imprimir o ambiente ordenado */
         char **sorted = sort_env(*env);
         if (!sorted)
-            return (1);
+            return (1); // Malloc error
         i = 0;
         while (sorted[i])
         {
+            // Use ft_putstr_fd for consistency? Or keep ft_printf?
             ft_printf("%s\n", sorted[i]);
             free(sorted[i]);
             i++;
         }
         free(sorted);
-        return (0);
+        return (0); // Success
     }
+
+    // Process arguments
     i = 1;
     while (args[i])
     {
         equal = ft_strchr(args[i], '=');
-        if (!equal)
+
+        if (!equal) // Variable name without '='
         {
-            ft_printf("export: invalid argument: %s\n", args[i]);
+            // Bash checks if the identifier itself is valid.
+            // If valid, it does nothing (doesn't export). If invalid, error.
+            if (!is_valid_identifier(args[i]))
+            {
+                ft_putstr_fd("minishell: export: `", 2);
+                ft_putstr_fd(args[i], 2);
+                ft_putstr_fd("': not a valid identifier\n", 2);
+                exit_code = 1; // Mark error
+            }
+            // else: valid identifier without '=', do nothing
         }
-        else
+        else // Variable name with '='
         {
-            *equal = '\0';
-            ret = update_env(env, args[i], equal + 1);
-            *equal = '=';
+            var_name = args[i];
+            *equal = '\0'; // Temporarily terminate string at '=' to check name
+
+            if (!is_valid_identifier(var_name))
+            {
+                *equal = '='; // Restore '=' before printing error
+                ft_putstr_fd("minishell: export: `", 2);
+                ft_putstr_fd(args[i], 2); // Print original invalid arg
+                ft_putstr_fd("': not a valid identifier\n", 2);
+                exit_code = 1; // Mark error
+            }
+            else
+            {
+                // Identifier is valid, try to update environment
+                if (update_env(env, var_name, equal + 1) != 0) {
+                    // update_env failed (likely malloc error)
+                    perror("minishell: export"); // update_env might have its own perror
+                    exit_code = 1; // Mark error
+                }
+                *equal = '='; // Restore '=' after processing
+            }
         }
-        i++;
+        i++; // Move to next argument
     }
-    return (ret);
+    return (exit_code); // Return 0 if all were okay, 1 if any error occurred
 }
 

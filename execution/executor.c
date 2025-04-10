@@ -86,23 +86,32 @@ end_ast: // Cleanup label
 
 int execute_command(t_shell *shell, char **args)
 {
-    if (!args || !args[0])
-        return (0);
+    // Handle empty command lines or NULL args array
+    if (!args || !args[0] || !args[0][0]) // Check also if args[0] is empty string
+        return (0); // Empty command is success (like Bash)
+
     /* Check builtins first */
     if (ft_strcmp(args[0], "cd") == 0)
-        return (ft_cd(args, &shell->env));
+        return (ft_cd(args, &shell->env)); // Assuming ft_cd returns 0/1
     if (ft_strcmp(args[0], "echo") == 0)
-        return (ft_echo(args));
+        return (ft_echo(args)); // Returns 0
     if (ft_strcmp(args[0], "pwd") == 0)
-        return (ft_pwd());
+        return (ft_pwd()); // Returns 0/1
     if (ft_strcmp(args[0], "exit") == 0)
-        return (ft_exit(args, shell));
+        return (ft_exit(args, shell)); // Exits or returns 1
     if (ft_strcmp(args[0], "export") == 0)
-        return (ft_export(args, &shell->env));
+        return (ft_export(args, &shell->env)); // Returns 0/1
+    // *** ADDED CHECK FOR UNSET ***
+    if (ft_strcmp(args[0], "unset") == 0)
+        return (ft_unset(args, shell)); // Returns 0/1
+    // *****************************
+    // Add checks for other builtins like 'env' here if you implement them
 
     /* If not a builtin, execute as external command */
+    // execute_external_command should return the interpreted exit code (0-255)
     return (execute_external_command(shell, args));
 }
+
 
 /*
 ** execute_simple_command:
