@@ -324,22 +324,36 @@ void readline_loop(t_shell *shell)
 
     while (1)
     {
-        ft_printf("💥"ULI);
-        konopwd(true, "pwd");
-        ft_printf(RST);
-        input = readline(TITLE);
-        if (!input) // Ctrl+D
-            exit(0);
-        if (*input)
+        // You might want ft_printf here or your libft equivalent
+        printf("💥" /*ULI*/); // Assuming ULI/RST are for readline prompt, maybe remove ft_printf if problematic
+        konopwd(true, "pwd"); // This seems like a custom debug, ok
+        printf(/*RST*/ "");
+
+        input = readline(TITLE); // Read input
+
+        if (!input) // Handle Ctrl+D (EOF)
+        {
+            ft_putstr_fd("exit\n", STDOUT_FILENO); // Optional: print exit message
+            cleanup_shell(shell); // Cleanup before exit
+            exit(g_exit_code); // Exit with last status
+        }
+
+        if (*input) // If input is not empty string
             add_history(input);
-        is_minishell_exit(input);
+
+        // --- REMOVED is_minishell_exit(input); ---
+
+        // Handle empty input line after potential history add
         if (!ft_strlen(input))
         {
             free(input);
-            continue;
+            continue; // Get new prompt
         }
+
+        // Process the command normally - ft_exit will be called if input is "exit"
         input_handler(shell, input);
-        free(input);
+
+        free(input); // Free input line
     }
 }
 

@@ -185,48 +185,39 @@ int ft_exit(char **args, t_shell *shell)
     bool is_numeric = true;
     int  i = 0;
 
-    ft_putstr_fd("exit\n", STDERR_FILENO); // Mimic bash printing "exit"
+    ft_putstr_fd("exit\n", STDERR_FILENO); // Print exit message to stderr
 
     if (!args[1]) {
-        // No argument: exit with the last command's status
+        // *** No argument: use global exit code ***
         exit_val = g_exit_code;
     } else {
-        // Check if argument is numeric
-        if (args[1][i] == '+' || args[1][i] == '-') // Skip leading sign
-            i++;
-        if (args[1][i] == '\0') // Sign only is not numeric
-            is_numeric = false;
+        // Check if numeric (you can refine this check)
+        i = 0;
+        if (args[1][i] == '+' || args[1][i] == '-') i++;
+        if (args[1][i] == '\0') is_numeric = false;
         while (args[1][i]) {
-            if (!ft_isdigit(args[1][i])) {
-                is_numeric = false;
-                break;
-            }
+            if (!ft_isdigit(args[1][i])) { is_numeric = false; break; }
             i++;
         }
-        // TODO: Add check for overflow (long long then check range?)
 
         if (!is_numeric) {
              ft_putstr_fd("minishell: exit: ", 2);
              ft_putstr_fd(args[1], 2);
              ft_putstr_fd(": numeric argument required\n", 2);
-             exit_val = 2; // Bash uses 255 here, 2 is also common for misuse
-             // We *must* exit here according to subject/bash
+             exit_val = 2; // Or 255 like bash
              cleanup_shell(shell);
-             exit(exit_val);
+             exit(exit_val); // Must exit on this error
         } else {
-             // Check for too many arguments ONLY if the first one was numeric
-             if (args[2]) {
+             if (args[2]) { // Check for too many arguments
                  ft_putstr_fd("minishell: exit: too many arguments\n", 2);
-                 // Don't exit, return error status 1 (bash behavior)
-                 return (1);
+                 return (1); // Return error 1, DO NOT exit
              }
              // Convert valid numeric argument
-             // Use proper long long parsing later if needed for overflow check
-             exit_val = ft_atoi(args[1]) % 256; // Use modulo 256 for 0-255 range
-             if (exit_val < 0) exit_val += 256; // Handle negative modulo result
+             exit_val = ft_atoi(args[1]) % 256;
+             if (exit_val < 0) exit_val += 256;
         }
     }
-    // If we reach here, we need to exit
+    // If we reach here, perform the exit
     cleanup_shell(shell);
     exit(exit_val);
     // return (0); // Unreachable
