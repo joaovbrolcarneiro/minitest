@@ -12,72 +12,100 @@
 */
 int execute_ast(t_shell *shell, t_node_tree *node)
 {
-    int status = 0; // Local variable for 0-255 exit code
-    int internal_status = 0; // For return values like -1 from helpers
-    int original_fds_saved = 0;
-    int original_fds[2];
+    int status = 0;             // Final exit code (0-255)
+    int internal_status = 0;    // Temp status from functions like handle_redirections
+    int original_fds_saved = 0; // Flag if FDs were successfully saved
+    int original_fds[2];        // Storage for saved FDs
 
     if (!node) {
-        g_exit_code = 0; // No node, success
+        g_exit_code = 0; // No node is success
         return 0;
     }
 
-    // Use reordered enum values for types
-    if (node->type == AST_PIPE) { // 0
+    // --- Process based on node type ---
+
+    if (node->type == AST_PIPE) { // Value 0
         status = execute_pipe_command(shell, node); // Returns 0-255
     }
-    else if (node->type >= AST_REDIR_IN && node->type <= AST_HEREDOC) { // 1, 2, 3, 4
-        // --- Redirection ---
+    else if (node->type >= AST_REDIR_IN && node->type <= AST_HEREDOC) { // Redirection types
+        // --- Redirection Block ---
         original_fds[0] = dup(STDIN_FILENO);
         original_fds[1] = dup(STDOUT_FILENO);
-        if (original_fds[0] == -1 || original_fds[1] == -1) { /* perror, etc */ status = 1; goto end_ast; }
-        original_fds_saved = 1;
-
-        internal_status = handle_redirections(node); // 0 or -1
-        if (internal_status != 0) {
-            status = 1; // Map redir error to exit code 1
-            goto end_ast; // Go to cleanup/end
-        }
-        if (node->left) {
-            status = execute_ast(shell, node->left); // Execute command, get 0-255
+        if (original_fds[0] == -1 || original_fds[1] == -1) {
+            perror("minishell: dup original fds");
+            if (original_fds[0] != -1) close(original_fds[0]);
+            // No need to close original_fds[1] if it failed
+            status = 1; // Set error status
         } else {
-            ft_putstr_fd("minishell: syntax error near unexpected token `newline'\n", 2);
-            status = 2;
+            original_fds_saved = 1; // Mark FDs as saved
+            // Proceed only if FDs were saved correctly
+            internal_status = handle_redirections(node); // Apply redirection (0 or -1)
+            if (internal_status != 0) {
+                status = 1; // Map internal error to exit code 1
+            } else {
+                // Redirection succeeded, now execute the command
+                t_node_tree *cmd_node = node->left; // Prefer left
+                if (!cmd_node || cmd_node->type != AST_COMMAND) { // Check if left is valid command
+                    if (node->right && node->right->type == AST_COMMAND) {
+                         cmd_node = node->right; // Fallback to right if valid command
+                    } else {
+                         cmd_node = NULL; // No valid command found
+                    }
+                }
+
+                if (cmd_node) {
+                    status = execute_ast(shell, cmd_node); // Execute associated command
+                } else {
+                    ft_putstr_fd("minishell: syntax error near redirection\n", 2);
+                    status = 2; // Syntax error code
+                }
+            }
+        }
+        // Cleanup: Restore FDs if they were saved, regardless of status inside
+        if (original_fds_saved) {
+            restore_fds(original_fds);
+            close_fds(original_fds);
         }
     }
-    else if (node->type == AST_COMMAND) { // 5
-        // --- Command ---
+    else if (node->type == AST_COMMAND) { // Value 5
+        // --- Simple Command Block ---
         original_fds[0] = dup(STDIN_FILENO);
         original_fds[1] = dup(STDOUT_FILENO);
-        if (original_fds[0] == -1 || original_fds[1] == -1) { /* perror, etc */ status = 1; goto end_ast; }
-        original_fds_saved = 1;
-
-        status = execute_simple_command(shell, node); // Returns 0-255
+        if (original_fds[0] == -1 || original_fds[1] == -1) {
+            perror("minishell: dup original fds");
+            if (original_fds[0] != -1) close(original_fds[0]);
+            status = 1;
+        } else {
+            original_fds_saved = 1;
+            // FDs saved, proceed with execution
+            status = execute_simple_command(shell, node); // Returns 0-255
+        }
+        // Cleanup: Restore FDs if they were saved
+        if (original_fds_saved) {
+            restore_fds(original_fds);
+            close_fds(original_fds);
+        }
     }
-    // Handle case where a non-command word becomes the root (Type 6)
-    else if (node->type == TOKEN_WORD) { // Check against actual TOKEN_WORD value (6)
-         ft_putstr_fd("minishell: command not found: ", 2);
-         ft_putstr_fd(node->content ? node->content : "unknown", 2);
-         ft_putstr_fd("\n", 2);
-         status = 127;
+    // Handle TOKEN_WORD type (Value 6) which resulted from failed command lookup
+    else if (node->type == TOKEN_WORD) {
+        ft_putstr_fd("minishell: command not found: ", 2);
+        ft_putstr_fd(node->content ? node->content : "unknown", 2);
+        ft_putstr_fd("\n", 2);
+        status = 127;
     }
-    else { // Truly unknown type
+    else { // Truly unknown/unexpected type
         ft_putstr_fd("minishell: execute_ast: Unknown node type ", 2);
         ft_putnbr_fd(node->type, 2);
         ft_putstr_fd("\n", 2);
         status = 1;
     }
 
-end_ast: // Cleanup label
-    if (original_fds_saved) {
-        // Add error checking for restore_fds? dup2 can fail.
-        restore_fds(original_fds);
-        close_fds(original_fds);
-    }
-    // *** Update global status at the end ***
+    // Update the global exit code at the very end
     g_exit_code = status;
     return (status);
 }
+
+
 /*
 ** execute_command:
 **   - Checks if the command is a builtin (you can add more builtins here).
