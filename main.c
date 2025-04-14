@@ -288,18 +288,21 @@ void input_handler(t_shell *shell, char *input)
 
     token = delegated_by_input_handler(input, shell->env);
     process_variable_assignments(shell, token);
-
-    // --- MODIFIED Expander Call ---
-    // Pass only needed args, expander reads g_exit_code for $?
-    expand_token_list_no_assignments(token, shell->env);
-    // ----------------------------
-
+    expand_token_list_no_assignments(token, shell->env); // Uses global g_exit_code
     token = handler_args_file(token, token);
-    parser_cmd_no_found(token, shell->env); // Needs is_builtin check inside
-    print_token_lst(token);
+    parser_cmd_no_found(token, shell->env);
+
+    // --- REMOVE OR COMMENT OUT THIS LINE ---
+    // print_token_lst(token);
+    // ---------------------------------------
+
     tree = init_yggdrasil(token);
     if (tree)
-        execute_ast(shell, tree); // execute_ast now updates g_exit_code
+        execute_ast(shell, tree); // Updates g_exit_code
+
+    // Note: AST tree and token list might need freeing here if not handled elsewhere
+    // free_tokens(token); // Example
+    // free_ast(tree);    // Example
 }
 
 
@@ -365,36 +368,37 @@ void readline_loop(t_shell *shell)
 
     while (1)
     {
-        // You might want ft_printf here or your libft equivalent
-        printf("💥" /*ULI*/); // Assuming ULI/RST are for readline prompt, maybe remove ft_printf if problematic
-        konopwd(true, "pwd"); // This seems like a custom debug, ok
-        printf(/*RST*/ "");
+        // --- REMOVED UNNECESSARY PRINTS ---
+        // ft_printf("💥"/*ULI*/); // Removed - Prompt handled by readline
+        // konopwd(true, "pwd"); // <<< REMOVED THIS CALL
+        // ft_printf(/*RST*/ ""); // Removed
+        // --------------------------------
 
-        input = readline(TITLE); // Read input
+        // Readline displays the prompt defined by TITLE
+        input = readline(TITLE);
 
         if (!input) // Handle Ctrl+D (EOF)
         {
-            ft_putstr_fd("exit\n", STDOUT_FILENO); // Optional: print exit message
-            cleanup_shell(shell); // Cleanup before exit
-            exit(g_exit_code); // Exit with last status
+            ft_putstr_fd("exit\n", STDOUT_FILENO);
+            cleanup_shell(shell);
+            exit(g_exit_code);
         }
 
-        if (*input) // If input is not empty string
+        if (*input)
             add_history(input);
 
-        // --- REMOVED is_minishell_exit(input); ---
+        // Removed is_minishell_exit call previously
 
-        // Handle empty input line after potential history add
-        if (!ft_strlen(input))
+        if (!ft_strlen(input)) // Handle empty line
         {
             free(input);
-            continue; // Get new prompt
+            continue;
         }
 
-        // Process the command normally - ft_exit will be called if input is "exit"
+        // Process command
         input_handler(shell, input);
 
-        free(input); // Free input line
+        free(input); // Free input line from readline
     }
 }
 
