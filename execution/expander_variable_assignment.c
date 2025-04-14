@@ -49,34 +49,36 @@
      }
  }
 
-void expand_token_list_no_assignments(t_token *token_list, char **env /* REMOVED , int last_exit_status */)
-{
-    t_token *cur;
-    char *expanded;
-    char *original_value; // Temp storage for original pointer
-
-    cur = token_list;
-    while (cur)
-    {
-        if (cur->value && !cur->literal && cur->type != TOKEN_ASSIGNMENT)
-        {
-            original_value = cur->value;
-
-            // Call expand_variables WITHOUT passing status parameter
-            expanded = expand_variables(original_value, env /* REMOVED , last_exit_status */);
-
-            // Memory handling
-            if (expanded == NULL && original_value != NULL) {
-                ft_putstr_fd("minishell: warning: expansion failed\n", 2);
-            } else if (expanded != original_value) {
-                free(original_value);
-                cur->value = expanded;
-            }
-            // else: no change or expansion failed but original was NULL
-        }
-        cur = cur->next;
-    }
-}
+ void expand_token_list_no_assignments(t_token *token_list, char **env)
+ {
+     t_token *cur;
+     char *expanded;
+     char *original_value; // Temp storage for original pointer
+ 
+     cur = token_list;
+     while (cur)
+     {
+         if (cur->value && !cur->literal && cur->type != TOKEN_ASSIGNMENT)
+         {
+             original_value = cur->value;
+             expanded = expand_variables(original_value, env); // Reads g_exit_code
+ 
+             // --- Safer Memory Handling ---
+             if (expanded == NULL && original_value != NULL) {
+                 // Expansion failed, print warning but keep original value
+                 ft_putstr_fd("minishell: warning: expansion failed for token\n", 2);
+                 // No free, no assignment: cur->value remains original_value
+             } else if (expanded != original_value) {
+                 // Expansion succeeded AND returned a NEW string pointer
+                 free(original_value); // Free the old string
+                 cur->value = expanded; // Assign the new string
+             }
+             // else: expansion returned original pointer (no change), do nothing.
+             // --- End Safer Memory Handling ---
+         }
+         cur = cur->next;
+     }
+ }
 
  void process_variable_assignments(t_shell *shell, t_token *token_list)
  {

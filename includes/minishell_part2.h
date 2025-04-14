@@ -79,8 +79,8 @@ bool is_pipe_super(char *input);//////////who_is_node
 bool is_cmd_super(char *input, char **env);//////////who_is_node
 bool is_eof(char *input);//////////who_is_node
 char **get_path_list(char **env);///////envar1
-char **command_list_malloc(char **list, char **env);///////envar1
-char **init_command_list(long long count, char **env);///////envar1
+char **command_list_malloc(char **env);///////envar1
+char **init_command_list(char **env);
 bool search_list(char *search, char **env);///////////envar1
 long long get_token_id();//////////utils1
 char *print_type(t_token *lst);/////////////dev_uitls/print_token_lst

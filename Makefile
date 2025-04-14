@@ -1,7 +1,8 @@
 # Updated Makefile with readline paths
 NAME        = minishell
 CC          = cc
-CFLAGS      = -I/usr/local/opt/readline/include -Iincludes -Ilibft
+##CFLAGS      = -I/usr/local/opt/readline/include -Iincludes -Ilibft
+CFLAGS      = -Wall -Wextra -Werror -g -I/usr/local/opt/readline/include -Iincludes -Ilibft
 LDFLAGS     = -L/usr/local/opt/readline/lib -lreadline -lncurses
 #READLINE_PATH = /opt/homebrew/opt/readline
 #CFLAGS += -I$(READLINE_PATH)/include

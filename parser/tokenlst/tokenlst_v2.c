@@ -6,7 +6,7 @@
 /*   By: jbrol-ca <jbrol-ca@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/31 21:05:42 by hde-barr          #+#    #+#             */
-/*   Updated: 2025/04/10 19:55:39 by jbrol-ca         ###   ########.fr       */
+/*   Updated: 2025/04/14 18:59:53 by jbrol-ca         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -23,47 +23,94 @@ size_t ft_strnlen(char *s, char n);
 
 bool proximity_exception(char *input, int i)/////////split_input
 {
-	if((!ischarset("|<>", input[i]) && input[i] != ' ') && input[i] && !ischarset("|<>", *input ))
-		return (true);
-	return (false);
+    // (Your existing logic)
+    if((!ischarset("|<>", input[i]) && input[i] != ' ') && input[i] && !ischarset("|<>", *input ))
+        return (true);
+    return (false);
 }
 
-t_token *split_input(char *input, int i)/////////split_input
+t_token *split_input(char *input, int i)/////////split_input (MODIFIED)
 {
     t_token *lst;
-    t_token *next;
-	t_token *first;
+    // t_token *next; // <<< REMOVED UNUSED VARIABLE
+    t_token *first;
 
     lst = malloc(sizeof(t_token));
-	first = lst;
+    if (!lst) // Add check for malloc failure
+        return (perror("malloc split_input"), NULL);
+    first = lst;
     while(*input)
     {
-		i = 1;
-		while (*input && *input == ' ')
-			input++;
-		if(!*input)
-			return (lst->next = NULL, lst->value = "", first);
-		if(ischarset("\"'", *input))
-			while(input[i] != *input && input[i] /*|| input[i + 1] != '\0'*/)//????
-				i++;
-		else
-			i = ft_strsetlen(input, "\"' |<>");
-		if(input[i] == *input)
-			i++;
-		if(ischarset("<>", *input))
-			if (*(input + 1) == *input)
-				i++;
-		//i++;
-		lst->merge_next = proximity_exception(input, i);
-		lst->value = ft_substr(input, 0, i);
-		lst->next = malloc(sizeof(t_token));
-		input += i;
-		while (*input && *input == ' ')
-			input++;
-		if(*input)
-		lst = lst->next;
+        i = 1;
+        while (*input && *input == ' ')
+            input++;
+        if(!*input) { // Reached end after spaces
+            // Need to handle the last allocated node if it wasn't used
+            // Maybe adjust logic slightly to malloc inside loop?
+            // For now, let's assume current logic intends to return 'first'
+            // but ensure the last node is properly terminated/handled
+            // If the loop breaks here, 'lst' might point to uninitialized memory
+            // Let's refine: Only return 'first' if at least one token was made.
+            // If input is just spaces, handle cleanly.
+            // A simpler approach might be needed here, but sticking to current structure:
+             lst->next = NULL; // Ensure last node points to NULL
+             lst->value = NULL; // Ensure value is NULL if loop exits early
+             // Need to free 'lst' if it was the first node and no token was processed?
+             // Let's assume caller handles potential NULL return if input is just spaces.
+             // Current return below assumes at least one token is processed.
+             break; // Break loop instead of returning immediately?
+        }
+
+        // Determine token length 'i' based on quotes or delimiters
+        char start_char = *input; // Keep track of starting char
+        if(ischarset("\"'", start_char))
+        {
+            i = 1;
+            while(input[i] && input[i] != start_char) i++;
+            if (input[i] == start_char) i++;
+            else { /* Handle unclosed quote error if needed */ i = 1; /* Default? */ }
+        }
+        else
+        {
+            i = ft_strsetlen(input, "\"' |<>");
+            if (i == 0 && ischarset("|<>", start_char)) { // Handle operators
+                i = 1; // Operator length is 1
+                if (ischarset("<>", start_char) && input[1] == start_char)
+                    i = 2; // Double operator length is 2
+            } else if (i==0 && *input != '\0') { // Catch other single non-delimiter chars?
+                 i = 1; // Should not happen if ft_strsetlen is correct?
+            } else if (i == 0 && *input == '\0') { // End of string case
+                break; // Nothing left to process
+            }
+        }
+         if (i == 0) i = 1; // Ensure progress if logic fails
+
+        lst->merge_next = proximity_exception(input, i);
+        lst->value = ft_substr(input, 0, i);
+        if (!lst->value) { /* Malloc failed in ft_substr */ perror("ft_substr split_input"); break; }
+
+        // Prepare for next iteration or end
+        input += i;
+        if(*input) { // If more input remains
+            lst->next = malloc(sizeof(t_token));
+            if (!lst->next) { /* Malloc failed */ perror("malloc next split_input"); free(lst->value); break; }
+            lst = lst->next;
+        } else { // End of input
+            lst->next = NULL;
+            break;
+        }
     }
-    return (lst->next = NULL, first);
+    // If loop broke early due to error, ensure last node is NULL terminated
+    if (lst) lst->next = NULL; // Ensure final node is terminated
+
+    // Check if any tokens were actually processed
+    if (!first || !first->value) {
+        // Handle empty input or only spaces - free initial malloc if nothing assigned
+        if (first) free(first);
+        return NULL;
+    }
+
+    return (first);
 }
 
 t_token *new_pipe(t_token *token)////////////init_node1
@@ -175,10 +222,14 @@ bool is_redir_super(char *input)//////////who_is_node
 	return (false);
 }
 
-bool is_word_super(char *input)//////////who_is_node
+bool is_word_super(char *input)//////////who_is_node (MODIFIED)
 {
-	return (true);
+    // Mark 'input' parameter as unused to avoid warning/error
+    (void)input;
+    // Any non-operator/non-command token is considered a word by default
+    return (true);
 }
+
 
 bool is_pipe_super(char *input)//////////who_is_node
 {

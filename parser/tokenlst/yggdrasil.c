@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   yggdrasil.c                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: hde-barr <hde-barr@student.42.fr>          +#+  +:+       +#+        */
+/*   By: jbrol-ca <jbrol-ca@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/31 21:06:50 by hde-barr          #+#    #+#             */
-/*   Updated: 2025/04/02 17:29:11 by hde-barr         ###   ########.fr       */
+/*   Updated: 2025/04/14 19:03:21 by jbrol-ca         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -75,27 +75,41 @@ t_token *find_left_token(t_token *token, t_token *first)////////yggdrasil
 	return (token);
 }
 
-t_node_tree *new_yggnode(t_token *token)////////yggdrasil
+t_node_tree *new_yggnode(t_token *token) // MODIFIED
 {
     t_node_tree *new_node;
 
     new_node = malloc(sizeof(t_node_tree));
-    if (!new_node)
+    if (!new_node) { // Use braces for clarity and Norm compliance
         return (NULL);
-	if (!token)
+    }
+    if (!token) { // Use braces
+        // Free allocated memory before returning NULL if token is invalid
+        free(new_node);
         return (NULL);
-	if (token->used == true)
-		return (NULL);
-	token->used = true;
-	new_node->right = NULL;
-	new_node->left = NULL;
-	//if (!new_node->right || !new_node->left)
-	//	return (NULL);
-	new_node->content = token->value;
-	new_node->type = (t_ast_type)token->type;
-	new_node->rank = token->rank;
-	new_node->args = token->args;
-	new_node->file = token->file;
+    }
+    if (token->used == true) { // Use braces
+        // Free allocated memory if token already used
+        free(new_node);
+        return (NULL);
+    }
+
+    // If checks passed, proceed with initialization
+    token->used = true;
+    new_node->right = NULL;
+    new_node->left = NULL;
+    new_node->content = token->value;
+
+    // Use direct cast (assuming reordered enums) OR mapping function
+    // Based on your setup (reordered enums):
+    new_node->type = (t_ast_type)token->type;
+    // --- OR if using mapping function ---
+    // new_node->type = map_token_to_ast_type(token->type);
+    // ------------------------------------
+
+    new_node->rank = token->rank;
+    new_node->args = token->args;
+    new_node->file = token->file;
     return (new_node);
 }
 

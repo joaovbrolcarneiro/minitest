@@ -107,15 +107,27 @@ void join_and_split(t_token *priv, t_token *token)
 
 t_token *redir_handler_file(t_token *token, t_token *first)
 {
-    if (token->coretype == REDIR && token->next)
-        if (token->next->rank != RANK_S)
-        {
-            ft_printf(YLW"%s\n", token->value);
-            ft_printf(PNK"%s\n", token->next->value);
-            token->file = rm_node_lst(token->next, first)->value;
+    // Check if current is Redir, next exists, and next is not an operator
+    if (token->coretype == REDIR && token->next && token->next->rank != RANK_S)
+    {
+        // --- REMOVE THESE LINES ---
+        // ft_printf(YLW"%s\n", token->value);
+        // ft_printf(PNK"%s\n", token->next->value);
+        // --------------------------
+
+        // Associate file and remove the filename token from list
+        t_token *file_node = rm_node_lst(token->next, first);
+        if (file_node) {
+            token->file = file_node->value;
+            // Free the node struct itself if rm_node_lst doesn't
+             // free(file_node); // Be careful with ownership/double free
+        } else {
+             token->file = NULL; // Handle error case
         }
+    }
     return (token);
 }
+
 
 t_token *cmd_handler_args(t_token *token, t_token *first)
 {
@@ -183,21 +195,50 @@ void handler_pipes(t_token_vec *token_vec)
 
 t_token *remap_lst(t_token *token)
 {
-    t_token *first;
-    t_token_vec *token_vec;
+    t_token *first = NULL; // Initialize 'first' directly to NULL
+    t_token_vec *token_vec = NULL; // Initialize 'token_vec' to NULL
 
-    first = malloc(sizeof(t_token));
-    first = NULL;
+    // first = malloc(sizeof(t_token)); // REMOVE THIS - Leaked memory
+    // first = NULL;                   // REMOVE THIS - Redundant after initialization
+
     while (token)
     {
+        // Calling handler_pipes with NULL will make the 'if (token_vec)' check fail
         handler_pipes(token_vec);
-        if (first == NULL)
-            first = token_vec->first;
-        token = token_vec->so_far;
-        if (token)
-            if (token_vec->so_far->type == TOKEN_PIPE)
-                token = token->next;
+
+        // This block likely never runs correctly as token_vec is always NULL here
+        if (first == NULL) {
+            // Check if token_vec is not NULL before dereferencing
+            if (token_vec)
+                first = token_vec->first;
+            // else: first remains NULL
+        }
+
+        // This line likely never runs correctly
+        if (token_vec)
+             token = token_vec->so_far; // Assign from token_vec->so_far
+        else
+             token = NULL; // If token_vec is NULL, we can't proceed? Exit loop.
+
+        // The original logic for advancing 'token' if it's a pipe also depended
+        // on token_vec being valid. This needs review.
+        if (token) { // Check if token is still valid
+             // If token_vec was meant to be populated by handler_pipes or another call:
+             // if (token_vec && token_vec->so_far && token_vec->so_far->type == TOKEN_PIPE)
+             // The original code used token_vec->so_far->type here, which is wrong.
+             // It should check the *current* token's type if trying to advance past a pipe.
+             if (token->type == TOKEN_PIPE) // Check the type of the *current* token
+                 token = token->next; // Advance past the pipe if needed
+            // else: token doesn't advance automatically if not a pipe? The loop might become infinite.
+            // Need clearer logic for how 'token' should advance within this loop.
+            // Maybe just token = token->next unconditionally at the end?
+            // Or maybe token assignment from token_vec->so_far was the intended advance?
+            // Given the broken state, let's assume we must manually advance.
+            // If token wasn't NULLed above, advance it.
+             if (token) token = token->next; // Tentative advance
+        }
     }
+    // This function likely always returns NULL currently due to flawed logic
     return (first);
 }
 

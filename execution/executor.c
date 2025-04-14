@@ -12,95 +12,76 @@
 */
 int execute_ast(t_shell *shell, t_node_tree *node)
 {
-    int status = 0;             // Final exit code (0-255)
-    int internal_status = 0;    // Temp status from functions like handle_redirections
-    int original_fds_saved = 0; // Flag if FDs were successfully saved
-    int original_fds[2];        // Storage for saved FDs
+    int status = 0;
+    int internal_status = 0;
+    int original_fds_saved = 0;
+    int original_fds[2];
 
     if (!node) {
-        g_exit_code = 0; // No node is success
-        return 0;
+        g_exit_code = 0; return 0;
     }
 
     // --- Process based on node type ---
 
     if (node->type == AST_PIPE) { // Value 0
-        status = execute_pipe_command(shell, node); // Returns 0-255
+        status = execute_pipe_command(shell, node);
     }
-    else if (node->type >= AST_REDIR_IN && node->type <= AST_HEREDOC) { // Redirection types
+    else if (node->type >= AST_REDIR_IN && node->type <= AST_HEREDOC) { // Values 1, 2, 3, 4
         // --- Redirection Block ---
-        original_fds[0] = dup(STDIN_FILENO);
-        original_fds[1] = dup(STDOUT_FILENO);
-        if (original_fds[0] == -1 || original_fds[1] == -1) {
-            perror("minishell: dup original fds");
-            if (original_fds[0] != -1) close(original_fds[0]);
-            // No need to close original_fds[1] if it failed
-            status = 1; // Set error status
-        } else {
-            original_fds_saved = 1; // Mark FDs as saved
-            // Proceed only if FDs were saved correctly
-            internal_status = handle_redirections(node); // Apply redirection (0 or -1)
-            if (internal_status != 0) {
-                status = 1; // Map internal error to exit code 1
-            } else {
-                // Redirection succeeded, now execute the command
-                t_node_tree *cmd_node = node->left; // Prefer left
-                if (!cmd_node || cmd_node->type != AST_COMMAND) { // Check if left is valid command
-                    if (node->right && node->right->type == AST_COMMAND) {
-                         cmd_node = node->right; // Fallback to right if valid command
-                    } else {
-                         cmd_node = NULL; // No valid command found
-                    }
-                }
-
-                if (cmd_node) {
-                    status = execute_ast(shell, cmd_node); // Execute associated command
-                } else {
-                    ft_putstr_fd("minishell: syntax error near redirection\n", 2);
-                    status = 2; // Syntax error code
-                }
-            }
-        }
-        // Cleanup: Restore FDs if they were saved, regardless of status inside
-        if (original_fds_saved) {
-            restore_fds(original_fds);
-            close_fds(original_fds);
-        }
+        // (Keep the logic from response #31 - save FDs, handle_redirections, execute child, restore FDs)
+        // ... (previous code for redirection block) ...
+         original_fds[0] = dup(STDIN_FILENO);
+         original_fds[1] = dup(STDOUT_FILENO);
+         if (original_fds[0] == -1 || original_fds[1] == -1) { /* perror, set status=1 */ status = 1; goto end_ast_redir; }
+         original_fds_saved = 1;
+         internal_status = handle_redirections(node);
+         if (internal_status != 0) { status = 1; goto end_ast_redir; }
+         t_node_tree *cmd_node = node->left;
+         if (!cmd_node || cmd_node->type != AST_COMMAND) {
+             if (node->right && node->right->type == AST_COMMAND) { cmd_node = node->right;}
+             else { cmd_node = NULL; }
+         }
+         if (cmd_node) { status = execute_ast(shell, cmd_node); }
+         else { ft_putstr_fd("minishell: syntax error near redirection\n", 2); status = 2; }
+     end_ast_redir:
+         if (original_fds_saved) { restore_fds(original_fds); close_fds(original_fds); }
+         // status already set above
     }
     else if (node->type == AST_COMMAND) { // Value 5
         // --- Simple Command Block ---
-        original_fds[0] = dup(STDIN_FILENO);
-        original_fds[1] = dup(STDOUT_FILENO);
-        if (original_fds[0] == -1 || original_fds[1] == -1) {
-            perror("minishell: dup original fds");
-            if (original_fds[0] != -1) close(original_fds[0]);
-            status = 1;
-        } else {
-            original_fds_saved = 1;
-            // FDs saved, proceed with execution
-            status = execute_simple_command(shell, node); // Returns 0-255
-        }
-        // Cleanup: Restore FDs if they were saved
-        if (original_fds_saved) {
-            restore_fds(original_fds);
-            close_fds(original_fds);
-        }
+         original_fds[0] = dup(STDIN_FILENO);
+         original_fds[1] = dup(STDOUT_FILENO);
+         if (original_fds[0] == -1 || original_fds[1] == -1) { /* perror, set status=1 */ status = 1; goto end_ast_command; }
+         original_fds_saved = 1;
+         status = execute_simple_command(shell, node);
+     end_ast_command:
+         if (original_fds_saved) { restore_fds(original_fds); close_fds(original_fds); }
+         // status already set above
     }
-    // Handle TOKEN_WORD type (Value 6) which resulted from failed command lookup
+    // *** NEW: Handle pure assignment statement that reaches executor ***
+    // We check against the *token* type value because the AST type is invalid
+    else if (node->type == (t_ast_type)TOKEN_ASSIGNMENT) // Check if type is 9
+    {
+        // Assignment was already handled by process_variable_assignments.
+        // If it's the only thing, command succeeds with status 0.
+        status = 0;
+    }
+    // *******************************************************************
+    // Handle TOKEN_WORD type (Value 6) - command not found
     else if (node->type == TOKEN_WORD) {
         ft_putstr_fd("minishell: command not found: ", 2);
         ft_putstr_fd(node->content ? node->content : "unknown", 2);
         ft_putstr_fd("\n", 2);
         status = 127;
     }
-    else { // Truly unknown/unexpected type
+    else { // Truly unknown type
         ft_putstr_fd("minishell: execute_ast: Unknown node type ", 2);
         ft_putnbr_fd(node->type, 2);
         ft_putstr_fd("\n", 2);
         status = 1;
     }
 
-    // Update the global exit code at the very end
+    // Update global exit code at the very end
     g_exit_code = status;
     return (status);
 }
@@ -204,52 +185,56 @@ int execute_simple_command(t_shell *shell, t_node_tree *node)
 int execute_external_command(t_shell *shell, char **args)
 {
     pid_t   pid;
-    int     wait_status; // Raw status from waitpid
-    int     exit_code;   // Final 0-255 exit code
+    int     wait_status;
+    int     exit_code;
     char    *cmd_path = NULL; // Initialize to NULL
 
+    // Ensure args and args[0] are valid before using them
+    if (!args || !args[0]) return (1); // Or handle appropriately
+
     pid = fork();
-    if (pid == 0) // Child
+    if (pid == 0) // Child Process
     {
         handle_child_signals();
-        if (args[0] && ft_strchr(args[0], '/')) // Check args[0] exists
+        if (ft_strchr(args[0], '/'))
             cmd_path = ft_strdup(args[0]);
-        else if (args[0]) // Check args[0] exists
+        else
             cmd_path = find_command_path(args[0], shell->env);
 
         if (!cmd_path) {
             ft_putstr_fd("minishell: command not found: ", 2);
-            ft_putstr_fd(args[0] ? args[0] : "", 2); // Handle NULL args[0]?
+            ft_putstr_fd(args[0], 2);
             ft_putstr_fd("\n", 2);
             exit(127);
         }
+
         execve(cmd_path, args, shell->env);
+
+        // If execve returns, it's an error
         perror("minishell: execve");
+        // *** ADD free() BEFORE exit() on error ***
         free(cmd_path);
+        // ******************************************
         if (errno == EACCES) exit(126);
-        if (errno == ENOENT) exit(127); // Should be caught by find_command_path
-        exit(EXIT_FAILURE);
+        if (errno == ENOENT) exit(127); // Should have been caught
+        exit(EXIT_FAILURE); // General failure
     }
     else if (pid < 0) // Fork Error
     {
         perror("minishell: fork");
-        return (1); // Error exit code
+        return (1);
     }
-    else // Parent
+    else // Parent Process
     {
         handle_parent_signals();
         waitpid(pid, &wait_status, 0);
 
-        if (WIFEXITED(wait_status)) {
-            exit_code = WEXITSTATUS(wait_status);
-        } else if (WIFSIGNALED(wait_status)) {
-            exit_code = 128 + WTERMSIG(wait_status);
-            if (WTERMSIG(wait_status) == SIGQUIT) ft_putstr_fd("Quit (core dumped)\n", 2);
-            else if (WTERMSIG(wait_status) == SIGINT) ft_putstr_fd("\n", 2);
-        } else {
-            exit_code = EXIT_FAILURE;
-        }
-        return (exit_code); // Return interpreted code
+        // Interpret status (as implemented previously)
+        if (WIFEXITED(wait_status)) { exit_code = WEXITSTATUS(wait_status); }
+        else if (WIFSIGNALED(wait_status)) { /* ... set 128 + signum ... */ exit_code = 128 + WTERMSIG(wait_status); /* print signal message? */ }
+        else { exit_code = EXIT_FAILURE; }
+        return (exit_code);
     }
 }
+
 

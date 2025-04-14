@@ -31,33 +31,44 @@ int	is_valid_var_char(char c, int pos)
 char    *expand_variables(const char *input, char **env /* REMOVED , int last_exit_status */)
 {
     t_exp_vars  v;
-    char        *original_input_ptr = (char *)input;
+    // char        *original_input_ptr = (char *)input; // <<< REMOVE THIS LINE
 
     if (!input) return (NULL);
 
-    // Call init without passing status
-    exp_var_init(&v, input, env /* REMOVED , last_exit_status */);
+    // Initialize without passing status
+    exp_var_init(&v, input, env /* REMOVED */);
 
     v.result = malloc(v.res_cap);
-    if (!v.result) return (NULL);
-    v.result[0] = '\0';
+    if (!v.result) {
+         perror("minishell: expand_variables: malloc"); // Add error context
+         return (NULL);
+    }
+    v.result[0] = '\0'; // Initialize empty string
 
-    bool expansion_occurred = false;
+    // bool expansion_occurred = false; // Keep if implementing optimization later
     while (v.input[v.i])
     {
         if (v.input[v.i] == '$') {
-            expansion_occurred = true;
+            // expansion_occurred = true; // Keep if implementing optimization later
             handle_dollar_expansion(&v); // handle_exit_status inside reads global
         } else {
             if (!append_char(&v.result, &v.res_len, &v.res_cap, v.input[v.i])) {
-                free(v.result); return (NULL);
+                free(v.result);
+                perror("minishell: expand_variables: append_char"); // Add error context
+                return (NULL);
             }
             v.i++;
         }
     }
+    // Null-terminate the final result string
     if (!append_char(&v.result, &v.res_len, &v.res_cap, '\0')) {
-        free(v.result); return (NULL);
+        free(v.result);
+        perror("minishell: expand_variables: append_char null term"); // Add error context
+        return (NULL);
     }
+
+    // Note: This version always returns a newly allocated string (v.result)
+    // unless an error occurs or input was NULL.
     return (v.result);
 }
 
