@@ -26,7 +26,7 @@ void	save_std_fds(t_shell *shell)
 			close(shell->saved_stdin);
 		if (shell->saved_stdout != -1)
 			close(shell->saved_stdout);
-		shell->saved_stdin = -1; // Mark as invalid
+		shell->saved_stdin = -1;
 		shell->saved_stdout = -1;
 	}
 }
@@ -68,4 +68,10 @@ void	close_fds(int fds[2])
 		close(fds[0]);
 	if (fds[1] >= 0)
 		close(fds[1]);
+}
+
+void	handle_child_signals(void)
+{
+	signal(SIGINT, SIG_DFL);
+	signal(SIGQUIT, SIG_DFL);
 }
