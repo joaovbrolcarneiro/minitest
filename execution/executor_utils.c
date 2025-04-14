@@ -72,31 +72,25 @@ void init_shell(t_shell *shell, char **env)
 */
 void cleanup_shell(t_shell *shell)
 {
-    if (!shell) return; // Safety check
+    if (!shell) return;
 
-    // Free environment copy
     if (shell->env) {
         ft_free_strarray(shell->env);
-        shell->env = NULL; // Good practice to NULL pointer after free
+        shell->env = NULL;
     }
 
-    // *** Close duplicated standard FDs ***
-    // Check if FDs are valid before closing (>= 0)
+    // Close duplicated standard FDs
     if (shell->saved_stdin >= 0) {
         close(shell->saved_stdin);
-        shell->saved_stdin = -1; // Mark as closed
+        shell->saved_stdin = -1;
     }
     if (shell->saved_stdout >= 0) {
         close(shell->saved_stdout);
-        shell->saved_stdout = -1; // Mark as closed
+        shell->saved_stdout = -1;
     }
-    // ************************************
 
-    // TODO: Free the AST if necessary (depends on parser cleanup)
-    // if (shell->ast_root) {
-    //     free_ast(shell->ast_root); // Assuming you have a free_ast function
-    //     shell->ast_root = NULL;
-    // }
+    // TODO: Add freeing of AST (Parser responsibility)
+    // free_ast(shell->ast_root);
 }
 
 /*

@@ -187,51 +187,48 @@ int execute_external_command(t_shell *shell, char **args)
     pid_t   pid;
     int     wait_status;
     int     exit_code;
-    char    *cmd_path = NULL; // Initialize to NULL
+    char    *cmd_path = NULL;
 
-    // Ensure args and args[0] are valid before using them
-    if (!args || !args[0]) return (1); // Or handle appropriately
+    if (!args || !args[0]) return (1);
 
     pid = fork();
-    if (pid == 0) // Child Process
+    if (pid == 0) // Child
     {
         handle_child_signals();
-        if (ft_strchr(args[0], '/'))
+        if (args[0] && ft_strchr(args[0], '/'))
             cmd_path = ft_strdup(args[0]);
-        else
+        else if (args[0])
             cmd_path = find_command_path(args[0], shell->env);
 
         if (!cmd_path) {
             ft_putstr_fd("minishell: command not found: ", 2);
-            ft_putstr_fd(args[0], 2);
+            ft_putstr_fd(args[0] ? args[0] : "", 2);
             ft_putstr_fd("\n", 2);
             exit(127);
         }
 
         execve(cmd_path, args, shell->env);
-
         // If execve returns, it's an error
         perror("minishell: execve");
-        // *** ADD free() BEFORE exit() on error ***
+        // *** FREE cmd_path BEFORE EXITING ON ERROR ***
         free(cmd_path);
-        // ******************************************
+        // *********************************************
         if (errno == EACCES) exit(126);
-        if (errno == ENOENT) exit(127); // Should have been caught
-        exit(EXIT_FAILURE); // General failure
+        exit(EXIT_FAILURE); // General failure (usually 1)
     }
     else if (pid < 0) // Fork Error
     {
         perror("minishell: fork");
+        // Free cmd_path if allocated in parent? No, path finding is in child.
         return (1);
     }
-    else // Parent Process
+    else // Parent
     {
         handle_parent_signals();
         waitpid(pid, &wait_status, 0);
 
-        // Interpret status (as implemented previously)
         if (WIFEXITED(wait_status)) { exit_code = WEXITSTATUS(wait_status); }
-        else if (WIFSIGNALED(wait_status)) { /* ... set 128 + signum ... */ exit_code = 128 + WTERMSIG(wait_status); /* print signal message? */ }
+        else if (WIFSIGNALED(wait_status)) { exit_code = 128 + WTERMSIG(wait_status); /* Signal msg printing? */ }
         else { exit_code = EXIT_FAILURE; }
         return (exit_code);
     }

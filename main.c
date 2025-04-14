@@ -300,9 +300,6 @@ void input_handler(t_shell *shell, char *input)
     if (tree)
         execute_ast(shell, tree); // Updates g_exit_code
 
-    // Note: AST tree and token list might need freeing here if not handled elsewhere
-    // free_tokens(token); // Example
-    // free_ast(tree);    // Example
 }
 
 
