@@ -19,6 +19,10 @@ PARSER_QUOTE = parser/quote_handling
 
 SRCS = \
     $(EXEC_DIR)/executor.c \
+    $(EXEC_DIR)/executor_dispatch.c \
+    $(EXEC_DIR)/executor_extra.c \
+    $(EXEC_DIR)/executor_redir_utils.c \
+    $(EXEC_DIR)/executor_simple_cmd.c \
     $(EXEC_DIR)/executor_utils.c \
     $(EXEC_DIR)/executor_redirections.c \
     $(EXEC_DIR)/executor_pipes.c \

@@ -228,5 +228,12 @@ bool is_builtin(const char *cmd);
 int ft_unset(char **args, t_shell *shell);
 bool is_valid_identifier(const char *identifier);
 int update_env(char ***env, char *var, char *value);
+int	handle_redir_execution(t_shell *shell, t_node_tree *node);
+int	handle_command_execution(t_shell *shell, t_node_tree *node);
+int	handle_word_token_execution(t_node_tree *node);
+int	handle_assignment_execution(t_node_tree *node);
+int	handle_pipe_execution(t_shell *shell, t_node_tree *node);
+int	save_original_fds(int original_fds[2]);
+int	execute_redir_cmd_node(t_shell *shell, t_node_tree *redir_node);
 
  #endif
