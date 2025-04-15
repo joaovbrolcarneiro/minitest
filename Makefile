@@ -22,8 +22,15 @@ SRCS = \
     $(EXEC_DIR)/executor_dispatch.c \
     $(EXEC_DIR)/executor_extra.c \
     $(EXEC_DIR)/executor_redir_utils.c \
+    $(EXEC_DIR)/executor_utils_env1.c \
+    $(EXEC_DIR)/executor_utils_env2.c \
+    $(EXEC_DIR)/executor_utils_sort.c \
+    $(EXEC_DIR)/executor_utils_path.c \
+    $(EXEC_DIR)/executor_utils_shell.c \
+    $(EXEC_DIR)/executor_utils_unset.c \
     $(EXEC_DIR)/executor_simple_cmd.c \
-    $(EXEC_DIR)/executor_utils.c \
+    $(EXEC_DIR)/executor_utils_builtins.c \
+    $(EXEC_DIR)/executor_utils_builtins_nav.c \
     $(EXEC_DIR)/executor_redirections.c \
     $(EXEC_DIR)/executor_fd_utils.c \
     $(EXEC_DIR)/executor_pipes.c \

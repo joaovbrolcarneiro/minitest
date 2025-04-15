@@ -461,7 +461,7 @@ bool is_builtin(const char *cmd)
     return (false);
 }
 
-int ft_unset(char **args, t_shell *shell)
+/*int ft_unset(char **args, t_shell *shell)
 {
     int i = 1;
     int j, k;
@@ -515,8 +515,8 @@ int ft_unset(char **args, t_shell *shell)
     }
     return (exit_code);
 }
-
-bool is_valid_identifier(const char *identifier)
+*/
+/*bool is_valid_identifier(const char *identifier)
 {
     int i = 0;
 
@@ -535,4 +535,4 @@ bool is_valid_identifier(const char *identifier)
 
     // If we passed all checks and the string wasn't just empty initially
     return (true);
-}
+}*/

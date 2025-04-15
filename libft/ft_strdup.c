@@ -3,16 +3,16 @@
 /*                                                        :::      ::::::::   */
 /*   ft_strdup.c                                        :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: hde-barr <hde-barr@student.42.fr>          +#+  +:+       +#+        */
+/*   By: jbrol-ca <jbrol-ca@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/10/21 11:55:55 by hde-barr          #+#    #+#             */
-/*   Updated: 2025/04/03 17:56:01 by hde-barr         ###   ########.fr       */
+/*   Updated: 2025/04/15 18:17:21 by jbrol-ca         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
 #include "libft.h"
 
-static void	ft_strcpy(char *dest, const char *src)
+void	ft_strcpy(char *dest, const char *src)
 {
 	size_t	i;
 

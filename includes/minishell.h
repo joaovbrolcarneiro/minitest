@@ -236,5 +236,7 @@ int	handle_pipe_execution(t_shell *shell, t_node_tree *node);
 int	save_original_fds(int original_fds[2]);
 int	execute_redir_cmd_node(t_shell *shell, t_node_tree *redir_node);
 int	read_heredoc_input(int pipe_write_fd, const char *delimiter);
+char *ft_strcat(char *dest, const char *src);
+char *ft_strcpy(char *dest, const char *src);
 
  #endif
