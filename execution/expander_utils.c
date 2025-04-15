@@ -1,96 +1,107 @@
 /* ************************************************************************** */
-/* expander_utils.c                                                           */
+/* */
+/* :::      ::::::::   */
+/* expander_utils.c                                   :+:      :+:    :+:   */
+/* +:+ +:+         +:+     */
+/* By: hde-barr <hde-barr@student.42.fr>          +#+  +:+       +#+        */
+/* mplíčdeps   +#+           */
+/* Created: 2025/04/15 00:00:00 by hde-barr          #+#    #+#             */
+/* Updated: 2025/04/15 13:15:02 by hde-barr         ###   ########.fr       */
+/* */
 /* ************************************************************************** */
 
 #include "minishell.h"
 
-
-int	append_char(char **buf, size_t *len, size_t *cap, char c)
+/* Helper: Appends null-terminated string content to v->result */
+static int	append_str_to_exp_vars(t_exp_vars *v, char *str)
 {
-	size_t	i;
-	char	*new_buf;
+	size_t	k;
 
-	if (*len + 1 >= *cap)
+	k = 0;
+	if (!str)
+		return (0);
+	while (str[k])
 	{
-		new_buf = malloc((*cap) * 2);
-		if (!new_buf)
-			return (0);
-		i = 0;
-		while (i < *len)
-		{
-			new_buf[i] = (*buf)[i];
-			i++;
-		}
-		free(*buf);
-		*buf = new_buf;
-		*cap *= 2;
+		if (!append_char(&v->result, &v->res_len, &v->res_cap, str[k]))
+			return (1);
+		k++;
 	}
-	(*buf)[(*len)++] = c;
-	return (1);
+	return (0);
 }
 
-void    handle_exit_status(t_exp_vars *v)
+/* Appends expanded exit status ($?) to result */
+/* Assumes append_str_to_exp_vars handles errors */
+void	handle_exit_status(t_exp_vars *v)
 {
-    char    *exit_str = NULL;
-    size_t  k = 0;
+	char	*exit_str;
 
-    // *** Read from global variable ***
-    exit_str = ft_itoa(g_exit_code);
-    // *********************************
-
-    if (!exit_str) { /* handle malloc error in ft_itoa */ return; }
-
-    while (exit_str[k])
-    {
-        if (!append_char(&v->result, &v->res_len, &v->res_cap, exit_str[k]))
-        {
-            free(exit_str);
-            return ;
-        }
-        k++;
-    }
-    free(exit_str);
-    v->i++; // Move past '?'
+	exit_str = ft_itoa(g_exit_code);
+	if (!exit_str)
+	{
+		perror("minishell: ft_itoa");
+		return ;
+	}
+	append_str_to_exp_vars(v, exit_str);
+	free(exit_str);
+	v->i++;
 }
 
+/* Helper: Extracts variable name length */
+static size_t	get_var_name_len(const char *input, size_t start_index)
+{
+	size_t	current_pos;
+	int		char_pos;
+
+	current_pos = start_index;
+	char_pos = 0;
+	while (input[current_pos] && \
+		is_valid_var_char(input[current_pos], char_pos))
+	{
+		current_pos++;
+		char_pos++;
+	}
+	return (current_pos - start_index);
+}
+
+/* Appends expanded variable ($VAR) to result */
+/* Assumes append_str_to_exp_vars handles errors */
 void	handle_variable(t_exp_vars *v)
 {
-	char	*tmp;
-	size_t	j;
+	char	*var_name;
+	size_t	var_len;
 
 	v->var_start = v->i;
-	v->pos = 0;
-	while (v->input[v->i] && is_valid_var_char(v->input[v->i], v->pos++))
-		v->i++;
-	tmp = ft_substr(v->input, v->var_start, v->i - v->var_start);
-	v->var_value = get_env_value_exp(tmp, v->env);
-	free(tmp);
-	j = 0;
-	while (v->var_value[j])
+	var_len = get_var_name_len(v->input, v->var_start);
+	if (var_len == 0)
+		return ;
+	var_name = ft_substr(v->input, v->var_start, var_len);
+	v->i += var_len;
+	if (!var_name)
 	{
-		if (!append_char(&v->result, &v->res_len, &v->res_cap, v->var_value[j]))
-			return ;
-		j++;
+		perror("minishell: ft_substr");
+		return ;
 	}
+	v->var_value = get_env_value_exp(var_name, v->env);
+	free(var_name);
+	append_str_to_exp_vars(v, v->var_value);
 }
 
-void	handle_dollar_expansion(t_exp_vars *v)
+/* Handles '$' expansion, returning 0 on success, 1 on failure */
+int	handle_dollar_expansion(t_exp_vars *v)
 {
 	v->i++;
 	if (v->input[v->i] == '?')
+	{
 		handle_exit_status(v);
+	}
 	else if (is_valid_var_char(v->input[v->i], 0))
+	{
 		handle_variable(v);
+	}
 	else
 	{
 		if (!append_char(&v->result, &v->res_len, &v->res_cap, '$'))
-			return ;
+			return (1);
 	}
-}
-
-void	append_normal_char(t_exp_vars *v)
-{
-	if (!append_char(&v->result, &v->res_len, &v->res_cap, v->input[v->i]))
-		return ;
-	v->i++;
+	return (0);
 }

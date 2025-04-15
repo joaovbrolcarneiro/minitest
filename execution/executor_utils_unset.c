@@ -34,11 +34,11 @@ static int	find_and_remove_var(t_shell *shell, const char *varname)
 				k++;
 			}
 			shell->env[k] = NULL;
-			return (1); // Found and removed
+			return (1);
 		}
 		j++;
 	}
-	return (0); // Not found
+	return (0);
 }
 
 /* Builtin unset command */

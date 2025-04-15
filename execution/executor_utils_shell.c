@@ -33,7 +33,7 @@ char	**ft_strdup_array(char **array)
 	{
 		dup[i] = ft_strdup(array[i]);
 		if (!dup[i])
-			return (ft_free_strarray(dup), NULL); // Free on error
+			return (ft_free_strarray(dup), NULL);
 		i++;
 	}
 	dup[len] = NULL;
@@ -100,6 +100,4 @@ void	cleanup_shell(t_shell *shell)
 		close(shell->saved_stdout);
 		shell->saved_stdout = -1;
 	}
-	// Add AST freeing here if applicable
-	// free_ast(shell->ast_root);
 }

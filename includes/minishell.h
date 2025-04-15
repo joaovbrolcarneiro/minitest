@@ -211,12 +211,12 @@ typedef enum e_token_type {
  int     fork_left(t_shell *shell, t_node_tree *node, int pipefd[2]);
  int fork_right(t_shell *shell, t_node_tree *node, int pipefd[2]);
 
-void    exp_var_init(t_exp_vars *v, const char *input, char **env /* REMOVED , int last_exit_status */);
+int    exp_var_init(t_exp_vars *v, const char *input, char **env /* REMOVED , int last_exit_status */);
  int     append_char(char **buf, size_t *len, size_t *cap, char c);
  void    handle_exit_status(t_exp_vars *v);
  void    handle_variable(t_exp_vars *v);
- void    handle_dollar_expansion(t_exp_vars *v);
- void    append_normal_char(t_exp_vars *v);
+ int    handle_dollar_expansion(t_exp_vars *v);
+ int    append_normal_char(t_exp_vars *v);
  char    *get_env_value_exp(const char *name, char **env);
  int     is_valid_var_char(char c, int pos);
  int is_valid_assignment(const char *token);

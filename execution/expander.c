@@ -1,9 +1,18 @@
 /* ************************************************************************** */
-/* expander.c                                                                 */
+/* */
+/* :::      ::::::::   */
+/* expander.c                                         :+:      :+:    :+:   */
+/* +:+ +:+         +:+     */
+/* By: hde-barr <hde-barr@student.42.fr>          +#+  +:+       +#+        */
+/* +#+#+#+#+#+   +#+           */
+/* Created: 2025/04/15 00:00:00 by hde-barr          #+#    #+#             */
+/* Updated: 2025/04/15 18:35:00 by hde-barr         ###   ########.fr       */
+/* */
 /* ************************************************************************** */
 
 #include "minishell.h"
 
+/* Gets value from environment, returns "" if not found */
 char	*get_env_value_exp(const char *name, char **env)
 {
 	char	*val;
@@ -14,6 +23,7 @@ char	*get_env_value_exp(const char *name, char **env)
 	return (val);
 }
 
+/* Checks if char c is valid at position pos in a variable name */
 int	is_valid_var_char(char c, int pos)
 {
 	if (pos == 0)
@@ -28,78 +38,68 @@ int	is_valid_var_char(char c, int pos)
 		|| c == '_');
 }
 
-char    *expand_variables(const char *input, char **env /* REMOVED , int last_exit_status */)
+/* Helper loop for expand_variables */
+/* Returns 0 on success, 1 on failure (e.g. append_char) */
+static int	expansion_loop(t_exp_vars *v)
 {
-    t_exp_vars  v;
-    // char        *original_input_ptr = (char *)input; // <<< REMOVE THIS LINE
-
-    if (!input) return (NULL);
-
-    // Initialize without passing status
-    exp_var_init(&v, input, env /* REMOVED */);
-
-    v.result = malloc(v.res_cap);
-    if (!v.result) {
-         perror("minishell: expand_variables: malloc"); // Add error context
-         return (NULL);
-    }
-    v.result[0] = '\0'; // Initialize empty string
-
-    // bool expansion_occurred = false; // Keep if implementing optimization later
-    while (v.input[v.i])
-    {
-        if (v.input[v.i] == '$') {
-            // expansion_occurred = true; // Keep if implementing optimization later
-            handle_dollar_expansion(&v); // handle_exit_status inside reads global
-        } else {
-            if (!append_char(&v.result, &v.res_len, &v.res_cap, v.input[v.i])) {
-                free(v.result);
-                perror("minishell: expand_variables: append_char"); // Add error context
-                return (NULL);
-            }
-            v.i++;
-        }
-    }
-    // Null-terminate the final result string
-    if (!append_char(&v.result, &v.res_len, &v.res_cap, '\0')) {
-        free(v.result);
-        perror("minishell: expand_variables: append_char null term"); // Add error context
-        return (NULL);
-    }
-
-    // Note: This version always returns a newly allocated string (v.result)
-    // unless an error occurs or input was NULL.
-    return (v.result);
+	while (v->input[v->i])
+	{
+		if (v->input[v->i] == '$')
+		{
+			if (handle_dollar_expansion(v) != 0)
+				return (1);
+		}
+		else
+		{
+			if (append_normal_char(v) != 0)
+				return (1);
+		}
+	}
+	return (0);
 }
 
+/* Expands variables ($VAR, $?) in a single string */
+/* Returns newly allocated string or NULL on error */
+char	*expand_variables(const char *input, char **env)
+{
+	t_exp_vars	v;
+	int			loop_status;
+
+	if (!input)
+		return (NULL);
+	if (exp_var_init(&v, input, env) != 0)
+		return (NULL);
+	loop_status = expansion_loop(&v);
+	if (loop_status != 0)
+		return (free(v.result), NULL);
+	if (!append_char(&v.result, &v.res_len, &v.res_cap, '\0'))
+		return (free(v.result), perror("minishell: expand null term"), NULL);
+	return (v.result);
+}
+
+/* Applies expand_variables to relevant tokens in a list */
+/* Uses safer free/assign pattern */
 void	expand_token_list(t_token *token_list, char **env)
 {
 	t_token	*cur;
 	char	*expanded;
+	char	*original_value;
 
 	cur = token_list;
 	while (cur)
 	{
 		if (cur->value && !cur->literal)
 		{
-			expanded = expand_variables(cur->value, env);
-			free(cur->value);
-			cur->value = expanded;
+			original_value = cur->value;
+			expanded = expand_variables(original_value, env);
+			if (expanded == NULL && original_value != NULL)
+				ft_putstr_fd("minishell: warning: expansion failed\n", 2);
+			else if (expanded != original_value)
+			{
+				free(original_value);
+				cur->value = expanded;
+			}
 		}
 		cur = cur->next;
 	}
-}
-
-void    exp_var_init(t_exp_vars *v, const char *input, char **env /* REMOVED , int last_exit_status */)
-{
-    v->input = input;
-    v->env = env;
-    // v->last_exit_status = last_exit_status; // REMOVED
-    v->i = 0;
-    v->res_len = 0;
-    v->res_cap = 128;
-    v->result = NULL;
-    v->var_start = 0;
-    v->pos = 0;
-    v->var_value = NULL;
 }
