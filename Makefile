@@ -42,6 +42,7 @@ SRCS = \
     $(EXEC_DIR)/executor_pipe_utils.c \
     $(PARSER_TL)/tokenlst.c \
     $(PARSER_TL)/tokenlst_v2.c \
+    $(PARSER_TL)/tokenlst_split_input.c \
     $(PARSER_TL)/yggdrasil.c \
     $(PARSER_BT)/binery_tree.c \
     $(PARSER_QUOTE)/quote_handling.c \

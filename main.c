@@ -290,11 +290,9 @@ bool	merge_to_token_exception(t_token *token)
 		return (false);
 	temp_val = token->value;
 	token->value = ft_strjoin(temp_val, rm_node->value);
-	// free original temp_val? Needs partner confirmation
 	if (!token->value)
 	{
 		token->value = temp_val;
-		// Need to relink rm_node?
 		return (false);
 	}
 	return (true);
@@ -341,9 +339,8 @@ void	input_handler(t_shell *shell, char *input)
 	{
 		g_exit_code = 2;
 	}
-	// Cleanup needed here by partner:
-	// free_tokens(token);
-	// free_ast(tree);
+	// free_tokens(token); free?
+	// free_ast(tree); free?
 }
 
 t_token	*delegated_by_input_handler(char *input, char **env)
@@ -351,7 +348,6 @@ t_token	*delegated_by_input_handler(char *input, char **env)
 	t_token	*first;
 	t_token	*token;
 
-	// Removed init value for i
 	token = split_input(input, 0);
 	first = token;
 	quote_handler_call_loop(token, env);
