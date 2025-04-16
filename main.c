@@ -34,46 +34,33 @@ bool konopwd(bool cmd_exist, const char *input)
 }
 
 
-/* Updated parser_cmd_no_found function */
-void parser_cmd_no_found(t_token *token, char **env)
+void	parser_cmd_no_found(t_token *token, char **env)
 {
-    t_token_type type; // To check original type easily
+	t_token_type	type;
 
-    while (token)
-    {
-        type = token->type; // Get current type
-
-        // Only process tokens that are potential commands initially
-        if (type != TOKEN_PIPE && type != TOKEN_ASSIGNMENT &&
-            type != TOKEN_REDIR_IN && type != TOKEN_REDIR_OUT &&
-            type != TOKEN_APPEND && type != TOKEN_HEREDOC)
-        {
-            // Check if it was ranked like a command (B or lower) AND
-            // it's not found in PATH AND
-            // it's NOT one of the known builtins.
-            if (token->rank <= RANK_B &&
-                !search_list(token->value, env) &&
-                // *** Add ft_strcmp(token->value, "unset") != 0 here ***
-                ft_strcmp(token->value, "cd") != 0 &&
-                ft_strcmp(token->value, "exit") != 0 &&
-                ft_strcmp(token->value, "pwd") != 0 &&
-                ft_strcmp(token->value, "export") != 0 &&
-                ft_strcmp(token->value, "unset") != 0 && // <<< ADDED THIS CHECK
-                ft_strcmp(token->value, "echo") != 0)
-                // Add other builtins like "env" here if implemented
-            {
-                // If all conditions above are true, it's likely an error.
-                token->type = TOKEN_WORD; // Downgrade to word
-                // Print error message (using ft_putstr_fd to stderr is better)
-                ft_putstr_fd(RED "minishell: command not found: ", 2);
-                ft_putstr_fd(token->value, 2);
-                ft_putstr_fd("\n" RESET, 2);
-            }
-            // If it IS a known builtin OR found in PATH, its type (TOKEN_CMD) remains.
-            // If it was already TOKEN_WORD, it also remains TOKEN_WORD.
-        }
-        token = token->next;
-    }
+	while (token)
+	{
+		type = token->type;
+		if (type != TOKEN_PIPE && type != TOKEN_ASSIGNMENT && \
+			type != TOKEN_REDIR_IN && type != TOKEN_REDIR_OUT && \
+			type != TOKEN_APPEND && type != TOKEN_HEREDOC)
+		{
+			if (token->rank <= RANK_B && \
+				!search_list(token->value, env) && \
+				!is_builtin(token->value))
+			{
+				token->type = TOKEN_WORD; // Downgrade
+			}
+			else if (token->type == TOKEN_WORD && \
+					 (is_builtin(token->value) || search_list(token->value, env)))
+			{
+				token->type = TOKEN_CMD;
+				token->rank = RANK_B;
+				token->coretype = TOKEN_CMD;
+			}
+		}
+		token = token->next;
+	}
 }
 
 t_token *rm_node_lst(t_token *token, t_token *first)
@@ -281,27 +268,48 @@ bool merge_to_token_exception(t_token *token)
 ** input_handler:
 ALTEREI UM POUCO
 */
-void input_handler(t_shell *shell, char *input)
+void	input_handler(t_shell *shell, char *input)
 {
-    t_token *token;
-    t_node_tree *tree;
+	t_token		*token;
+	t_node_tree	*tree;
+	bool		parse_error;
 
-    token = delegated_by_input_handler(input, shell->env);
-    process_variable_assignments(shell, token);
-    expand_token_list_no_assignments(token, shell->env); // Uses global g_exit_code
-    token = handler_args_file(token, token);
-    parser_cmd_no_found(token, shell->env);
+	tree = NULL; // Initialize tree
+	token = delegated_by_input_handler(input, shell->env);
+	parse_error = has_parser_error(token);
 
-    // --- REMOVE OR COMMENT OUT THIS LINE ---
-    // print_token_lst(token);
-    // ---------------------------------------
-
-    tree = init_yggdrasil(token);
-    if (tree)
-        execute_ast(shell, tree); // Updates g_exit_code
-
+	if (!parse_error)
+	{
+		process_variable_assignments(shell, token);
+		expand_token_list_no_assignments(token, shell->env);
+		token = handler_args_file(token, token);
+		parser_cmd_no_found(token, shell->env);
+		tree = init_yggdrasil(token);
+		if (tree)
+		{
+			execute_ast(shell, tree);
+		}
+		else
+		{
+			g_exit_code = 0;
+		}
+	}
+	else
+	{
+		g_exit_code = 2;
+	}
 }
 
+bool	has_parser_error(t_token *token) //importante para input_handler
+{
+	while (token)
+	{
+		if (token->err)
+			return (true);
+		token = token->next;
+	}
+	return (false);
+}
 
 t_token *delegated_by_input_handler(char *input, char **env)
 {

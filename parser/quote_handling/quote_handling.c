@@ -6,7 +6,7 @@
 /*   By: jbrol-ca <jbrol-ca@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/02/27 17:59:46 by hde-barr          #+#    #+#             */
-/*   Updated: 2025/04/07 19:09:58 by jbrol-ca         ###   ########.fr       */
+/*   Updated: 2025/04/16 20:30:54 by jbrol-ca         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -73,34 +73,28 @@ char *quote_handler_cpy(int count, char *input, char **env)///////it is here
 	return (dst);
 }
 
-char *is_quote_opened(char *input, int *is_unclosed)///////it is here
+char	*is_quote_opened(char *input, int *is_unclosed)
 {
-	//char *buf;
-	//char *tmp;
-	//int i;
-	//char c;
+	size_t	len;
+	char	start_quote;
 
-	//i = -1;
-	// = *input;
-	//buf = ft_strjoin(input,"\n");
-	if(ischarset("\"'", *input))
-		if(*input != input[ft_strlen(input) - 1] || ft_strlen(input) == 1)
-			return(printf(RED"parser error: unclosed quotes\n"RESET), \
-			*is_unclosed = 1, "unclosed_error");
-			//return ("'parser error: unclosed quotes'");///////!!!!!!!!!!!!! joao util heredoc!!!!!!!!!!!!!!!!!!
-			/*while (1)
-			{
-				ft_printf(BLUE">"RESET);
-					tmp = get_next_line(0);
-					buf = ft_strjoin(buf,tmp);
-					if(tmp[ft_strnlen(tmp, '\n') -1 ] == c)
-					{						
-						if(buf[ft_strlen(buf) -1] == '\n')
-							buf[ft_strlen(buf) -1] = '\0';
-						return (buf);
-					}
-			}*/
-	return (input);
+	*is_unclosed = 0;
+	if (!input)
+		return (NULL);
+	len = ft_strlen(input);
+	if (ischarset("\"'", input[0]))
+	{
+		start_quote = input[0];
+		if (len == 1 || input[0] != input[len - 1])
+		{
+			ft_putstr_fd(RED "konosubash: parser error: unclosed quote `", 2);
+			ft_putstr_fd(input, 2);
+			ft_putstr_fd("'\n" RESET, 2); // Use colors here too if desired
+			*is_unclosed = 1;
+			return (input); // Return original pointer on error
+		}
+	}
+	return (input); // Return original pointer if okay
 }
 
 bool handler_quote_operator(char *input)///////it is here
@@ -162,7 +156,7 @@ char  *quote_handler(t_token *token, char **env, int *is_unclosed)
             perror("ft_strtrim in quote_handler");
             return (token->value);
         }
-        // free(token->value); // Consider memory management if value was allocated
+        // free(token->value); // fazer free?
         token->value = trimmed_value;
         if (!token->literal) {
              cmd_len = quote_handler_counter(token->value, env);

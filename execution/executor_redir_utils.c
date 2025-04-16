@@ -101,11 +101,12 @@ int	execute_ast(t_shell *shell, t_node_tree *node)
 /* Handles execution attempt for TOKEN_WORD nodes */
 int	handle_word_token_execution(t_node_tree *node)
 {
-	ft_putstr_fd("minishell: command not found: ", 2);
+	char	*cmd_name;
+
 	if (node && node->content)
-		ft_putstr_fd(node->content, 2);
+		cmd_name = node->content;
 	else
-		ft_putstr_fd("unknown", 2);
-	ft_putstr_fd("\n", 2);
-	return (127);
+		cmd_name = "unknown"; // Should not happen often
+	ft_printf(RED "konosubash: %s: command not found\n" RESET, cmd_name);
+	return (127); // Command not found status
 }
