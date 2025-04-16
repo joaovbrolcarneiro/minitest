@@ -3,10 +3,10 @@
 /*                                                        :::      ::::::::   */
 /*   binery_tree.c                                      :+:      :+:    :+:   */
 /*                                                    +:+ +:+         +:+     */
-/*   By: hde-barr <hde-barr@student.42.fr>          +#+  +:+       +#+        */
+/*   By: jbrol-ca <jbrol-ca@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2025/03/31 21:06:10 by hde-barr          #+#    #+#             */
-/*   Updated: 2025/04/02 16:40:27 by hde-barr         ###   ########.fr       */
+/*   Updated: 2025/04/16 21:29:10 by jbrol-ca         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -138,7 +138,7 @@ void print_env(char **env)/////////////envar2
 	}
 }
 
-char *domane_expantion(char **env, char *input)//////envar2
+char *domane_expantion(char **env, char *input)//////envar2 obs valgrind
 {
 	if (ft_strncmp(ft_strtrim(input, " "),"env", ft_strlen(input) + 3) == 0)
 		print_env(env);
