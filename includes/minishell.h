@@ -137,6 +137,15 @@ typedef enum e_token_type {
      char        *var_value;
  }   t_exp_vars;
 
+/* Structure to hold variables for quote_handler_cpy helper */
+typedef struct s_exp_cpy_vars
+{
+	char	*dst;		// Destination buffer
+	int		i;			// Index for input string
+	int		start;		// Start index for substring
+	size_t	count;		// Current write index/length in dst
+}	t_exp_cpy_vars; // Typedef for the struct
+
  /*
  ** Parser functions
  */

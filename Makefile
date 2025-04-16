@@ -44,7 +44,8 @@ SRCS = \
     $(PARSER_TL)/tokenlst_v2.c \
     $(PARSER_TL)/yggdrasil.c \
     $(PARSER_BT)/binery_tree.c \
-    $(PARSER_QUOTE)/quote_handling.c              
+    $(PARSER_QUOTE)/quote_handling.c \
+    $(PARSER_QUOTE)/quote_expansion.c               
 
 OBJS        = $(SRCS:.c=.o)
 LIBFT       = $(LIBFT_DIR)/libft.a

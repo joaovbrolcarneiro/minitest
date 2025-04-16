@@ -85,11 +85,32 @@ void add_node_lst(t_token *dst_lst, t_token *token)
     token->next = tmp;
 }
 
-void join_and_split(t_token *priv, t_token *token)
+void	join_and_split(t_token *priv, t_token *token) // ALTEREI - JOAO
 {
-    priv->value = ft_strjoin(priv->value, "\x1F");
-    priv->value = ft_strjoin(priv->value, token->value);
-    priv->args = ft_split(priv->value, '\x1F');
+	char	*temp_join1;
+	char	*temp_join2;
+	char	**args_to_free;
+
+	if (!priv || !token || !token->value)
+		return ;
+	args_to_free = priv->args;
+	if (!priv->value)
+		priv->value = ft_strdup("");
+	if (!priv->value)
+		return ;
+	temp_join1 = ft_strjoin(priv->value, "\x1F");
+	if (!temp_join1)
+		return (perror("minishell: join_and_split: strjoin1"));
+	temp_join2 = ft_strjoin(temp_join1, token->value);
+	free(temp_join1);
+	if (!temp_join2)
+		return (perror("minishell: join_and_split: strjoin2"));
+	priv->args = ft_split(temp_join2, '\x1F');
+	free(temp_join2);
+	if (args_to_free)
+		ft_free_strarray(args_to_free);
+	if (!priv->args)
+		perror("minishell: join_and_split: ft_split");
 }
 
 t_token *redir_handler_file(t_token *token, t_token *first)
@@ -116,40 +137,35 @@ t_token *redir_handler_file(t_token *token, t_token *first)
 }
 
 
-t_token *cmd_handler_args(t_token *token, t_token *first)
+t_token	*cmd_handler_args(t_token *token, t_token *first)
 {
-    t_token *redir = NULL;
+	t_token	*redir;
+	t_token	*arg_node;
 
-    while (token && token->rank != RANK_S)
-    {
-        while (token->next && token->rank != RANK_S)
-        {
-            if (redir_handler_file(token->next, first)->coretype == REDIR)
-                redir = rm_node_lst(token->next, first);
-            if (token->next && token->next->rank != RANK_S)
-            {
-                join_and_split(token, rm_node_lst(token->next, first));
-                if (token->next && token->next->coretype == REDIR)
-                    continue;
-                if (!token->next || token->next->rank == RANK_S)
-                    token->value = token->args[0];
-            }
-            else
-            {
-                if (token->args)
-                    token->value = token->args[0];
-                break;
-            }
-        }
-        if (redir)
-        {
-            add_node_lst(token, redir);
+	redir = NULL;
+	while (token && token->rank != RANK_S)
+	{
+		while (token->next && token->next->rank != RANK_S)
+		{
+			if (token->next->coretype == REDIR)
+				break ;
+			else
+			{
+				arg_node = rm_node_lst(token->next, first);
+				if (!arg_node)
+					break ;
+				join_and_split(token, arg_node);
+			}
+		}
+		if (redir)
+			add_node_lst(token, redir);
+		if (redir)			
             redir = NULL;
-        }
-        token = token->next;
-    }
-    return (first);
+		token = token->next;
+	}
+	return (first);
 }
+
 
 t_token *handler_args_file(t_token *token, t_token *first)
 {
@@ -374,8 +390,8 @@ void readline_loop(t_shell *shell)
     while (1)
     {
         // --- REMOVED UNNECESSARY PRINTS ---
-        // ft_printf("💥"/*ULI*/); // Removed - Prompt handled by readline
-        // konopwd(true, "pwd"); // <<< REMOVED THIS CALL
+        ft_printf("💥"/*ULI*/); // Removed - Prompt handled by readline
+        konopwd(true, "pwd"); // <<< REMOVED THIS CALL
         // ft_printf(/*RST*/ ""); // Removed
         // --------------------------------
 
@@ -419,7 +435,6 @@ int main(int argc, char **argv, char **envp)
 
     g_exit_code = 0; // Initialize global status
 
-    // Init shell struct (init_shell modified to remove exit_status)
     init_shell(&shell, envp);
 
     signal(SIGQUIT, SIG_IGN);

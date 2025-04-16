@@ -1,78 +1,19 @@
 /* ************************************************************************** */
-/*                                                                            */
-/*                                                        :::      ::::::::   */
-/*   quote_handling.c                                   :+:      :+:    :+:   */
-/*                                                    +:+ +:+         +:+     */
-/*   By: jbrol-ca <jbrol-ca@student.42.fr>          +#+  +:+       +#+        */
-/*                                                +#+#+#+#+#+   +#+           */
-/*   Created: 2025/02/27 17:59:46 by hde-barr          #+#    #+#             */
-/*   Updated: 2025/04/16 20:30:54 by jbrol-ca         ###   ########.fr       */
-/*                                                                            */
+/* */
+/* :::      ::::::::   */
+/* quote_handling.c                                   :+:      :+:    :+:   */
+/* +:+ +:+         +:+     */
+/* By: hde-barr <hde-barr@student.42.fr>          +#+  +:+       +#+        */
+/*<y_bin_46>+#+#+#+#+#+   +#+           */
+/* Created: 2025/02/27 17:59:46 by hde-barr          #+#    #+#             */
+/* Updated: 2025/04/16 20:45:00 by hde-barr         ###   ########.fr       */
+/* */
 /* ************************************************************************** */
 
 #include "minishell.h"
 #include "minishell_part2.h"
 
-//int	g_exit_code;
-
-
-
-//void print_env(char **env);
-
-int quote_handler_counter(char *input, char **env)/////it is here
-{
-	int i;
-	int counter;
-	int start;
-	
-	i = 0;
-	counter = 0;
-	while(input[i])
-		if(ischarset("$", input[i]))
-		{
-			start = ++i;
-			while (!ischarset(QUOTE_SET, input[i]) &&  input[i])
-				i++;
-			counter += ft_strlen(\
-			domane_expantion(env, ft_substr(input, start, i - start)));
-		}
-		else
-		{
-			i++;
-			counter++;
-		}	
-	return (counter);
-}
-
-char *quote_handler_cpy(int count, char *input, char **env)///////it is here
-{
-	char *dst;
-	int i;
-	int start;
- 
-	i = 0;
-	if(ft_strcmp(ft_strtrim(input, " "),"$") == 0)
-		return ("$");
-	dst = ft_calloc(sizeof(char), count + 1);
-	count = 0;
-	if(!dst)
-		return("");
-	while (input[i])
-		if(ischarset("$", input[i]))
-		{
-			start = ++i;
-			while (!ischarset(QUOTE_SET, input[i]) &&  input[i])
-				i++;
-			ft_strlcat(dst, domane_expantion(env, ft_substr(input, start, \
-			i - start)), count + ft_strlen(domane_expantion(env, \
-			ft_substr(input, start, i - start))) + 1);
-			count = ft_strlen(dst);
-		}
-		else
-			dst[count++] = input[i++];
-	return (dst);
-}
-
+/* Checks for unclosed quotes */
 char	*is_quote_opened(char *input, int *is_unclosed)
 {
 	size_t	len;
@@ -89,22 +30,25 @@ char	*is_quote_opened(char *input, int *is_unclosed)
 		{
 			ft_putstr_fd(RED "konosubash: parser error: unclosed quote `", 2);
 			ft_putstr_fd(input, 2);
-			ft_putstr_fd("'\n" RESET, 2); // Use colors here too if desired
+			ft_putstr_fd("'\n" RESET, 2);
 			*is_unclosed = 1;
-			return (input); // Return original pointer on error
 		}
 	}
-	return (input); // Return original pointer if okay
+	return (input);
 }
 
-bool handler_quote_operator(char *input)///////it is here
+/* Checks if input exactly matches a quoted operator */
+bool	handler_quote_operator(char *input)
 {
-	int i;
-	const char *dictionary[] = \
-	{"\"<<\"", "\">>\"", "\"<\"", "\">\"", "'<<'", "'>>'", \
-	"'<'", "'>'", "\"|\"", "'|'", NULL};
+	int			i;
+	const char	*dictionary[] = {
+		"\"<<\"", "\">>\"", "\"<\"", "\">\"",
+		"'<<'", "'>>'", "'<'", "'>'",
+		"\"|\"", "'|'", NULL};
 
 	i = 0;
+	if (!input)
+		return (false);
 	while (dictionary[i])
 	{
 		if (ft_strcmp(dictionary[i], input) == 0)
@@ -114,59 +58,84 @@ bool handler_quote_operator(char *input)///////it is here
 	return (false);
 }
 
-char  *quote_handler(t_token *token, char **env, int *is_unclosed)
+/* Helper for quote_handler: Handles single quotes */
+static char	*handle_single_quotes(t_token *token, char *original_value)
 {
-    int cmd_len;
-    char quote_char = 0;
-    char *trimmed_value = NULL;
-    bool is_operator_literal;
+	char	*trimmed_value;
 
-    *is_unclosed = 0;
-    if (!token || !token->value)
-        return (NULL);
-
-    if (token->value[0] == '\'' || token->value[0] == '"')
-        quote_char = token->value[0];
-
-    token->value = is_quote_opened(token->value, is_unclosed);
-    if (*is_unclosed)
-        return (token->value);
-
-    is_operator_literal = handler_quote_operator(token->value);
-
-    if (quote_char == '\'')
-    {
-        token->literal = true; // Change was adding this line
-        trimmed_value = ft_strtrim(token->value, "'");
-         if (!trimmed_value) {
-            perror("ft_strtrim in quote_handler");
-            return (token->value);
-        }
-        // free(token->value); // Consider memory management if value was allocated
-        token->value = trimmed_value;
-        return (token->value);
-    }
-
-    token->literal = is_operator_literal;
-
-    if (quote_char == '"')
-    {
-        trimmed_value = ft_strtrim(token->value, "\"");
-         if (!trimmed_value) {
-            perror("ft_strtrim in quote_handler");
-            return (token->value);
-        }
-        // free(token->value); // fazer free?
-        token->value = trimmed_value;
-        if (!token->literal) {
-             cmd_len = quote_handler_counter(token->value, env);
-             // Potential free needed for token->value before reassigning?
-             token->value = quote_handler_cpy(cmd_len, token->value, env);
-        }
-        return (token->value);
-    }
-
-    return (token->value);
+	token->literal = true;
+	trimmed_value = ft_strtrim(original_value, "'");
+	if (!trimmed_value)
+	{
+		perror("ft_strtrim in quote_handler");
+		return (original_value);
+	}
+	// free(original_value); // Freeing original value commented out
+	token->value = trimmed_value;
+	return (token->value);
 }
 
+/* Helper for quote_handler: Handles double quotes */
+static char	*handle_double_quotes(t_token *token, char **env, \
+									char *original_value, bool is_operator_literal)
+{
+	char	*trimmed_value;
+	char	*expanded_value;
+	int		cmd_len;
+
+	token->literal = is_operator_literal;
+	trimmed_value = ft_strtrim(original_value, "\"");
+	// free(original_value); // Freeing original value commented out
+	if (!trimmed_value)
+	{
+		perror("ft_strtrim in quote_handler");
+		token->value = NULL;
+		return (NULL);
+	}
+	token->value = trimmed_value;
+	if (!token->literal)
+	{
+		cmd_len = quote_handler_counter(trimmed_value, env);
+		expanded_value = quote_handler_cpy(cmd_len, trimmed_value, env);
+		// free(trimmed_value); // Freeing intermediate result commented out
+		if (!expanded_value)
+		{
+			perror("quote_handler_cpy failed");
+			token->value = NULL;
+			return (NULL);
+		}
+		token->value = expanded_value;
+	}
+	return (token->value);
+}
+
+/* Main quote handler */
+char	*quote_handler(t_token *token, char **env, int *is_unclosed)
+{
+	char	quote_char;
+	char	*original_value;
+	bool	is_operator_literal;
+
+	*is_unclosed = 0;
+	if (!token || !token->value)
+		return (NULL);
+	original_value = token->value;
+	quote_char = 0;
+	if (original_value[0] == '\'' || original_value[0] == '"')
+		quote_char = original_value[0];
+	is_quote_opened(original_value, is_unclosed);
+	if (*is_unclosed)
+		return (original_value);
+	is_operator_literal = handler_quote_operator(original_value);
+	if (quote_char == '\'')
+		return (handle_single_quotes(token, original_value));
+	else if (quote_char == '"')
+		return (handle_double_quotes(token, env, original_value, \
+									is_operator_literal));
+	else
+	{
+		token->literal = is_operator_literal;
+		return (original_value);
+	}
+}
 
